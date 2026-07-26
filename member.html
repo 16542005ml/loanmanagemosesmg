@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <script src="utils/security.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Portal | Loan & Money Hub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style/member.css?v=2.2">
+        <style>
+            /* Check-in unread clear animation */
+            @keyframes checkinClear {
+                0% { transform: scale(1); opacity: 1; }
+                40% { transform: scale(1.08); opacity: 0.95; }
+                100% { transform: scale(0.6); opacity: 0; }
+            }
+            #checkinUnreadBtn.checkin-cleared { animation: checkinClear 420ms ease forwards; }
+        </style>
+</head>
+
+<body>
+
+<!-- 
+     AUTH BLUR GATE - Covers entire portal until verified login
+     JS in member.js evaluates session on DOMContentLoaded and
+     calls dissolveAuthGate() to remove it for approved members.
+ -->
+<div id="authBlurGate" role="dialog" aria-modal="true" aria-label="Authentication required">
+    <div class="blur-gate-card">
+        <i class="fas fa-lock blur-gate-icon"></i>
+        <h2>Access Restricted</h2>
+        <p>
+            This portal is secured. Please sign in with your approved
+            membership credentials to access the dashboard and services.
+        </p>
+        <a href="#" class="blur-gate-btn" id="gateLoginBtn"
+           onclick="openAuthPortal(event,'authSection', 'loginForm')">
+            <i class="fas fa-sign-in-alt"></i>&nbsp; Sign In to Portal
+        </a>
+        <a href="#" class="blur-gate-btn-secondary" id="gateRegisterBtn"
+           onclick="openAuthPortal(event,'authSection', 'registerForm')">
+            <i class="fas fa-user-plus"></i>&nbsp; New Member? Register Here
+        </a>
+        <div class="blur-gate-badge">
+            <i class="fas fa-shield-alt"></i>
+            End-to-end encrypted &bull; Session token verified &bull; Admin-approved access only
+        </div>
+    </div>
+</div>
+
+    <h1 class="header-mobile-title" style="display: none;">CCS</h1>
+
+    <header class="top-header">
+        <div class="header-left">
+            <button class="hamburger-btn" id="menuToggleBtn" title="Toggle Navigation Menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="logo-area">
+                <i class="fas fa-wallet text-primary"></i>
+                <span>CAPITAL <span>CONNECTION </span>SYSTEM</span></SPAN>
+            </div>
+        </div>
+        <div class="header-right" style="display: flex; align-items: center; gap: 10px;">
+            <!-- Unread Messages Badge -->
+            <div id="unreadMessagesBadge" style="display:none; position:relative;">
+                <button class="hamburger-btn" id="unreadBadgeBtn" onclick="openMemberNotification('messages')" title="View message notifications"
+                    style="position:relative; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); border-radius:8px; padding:6px 10px; cursor:pointer; color:#ef4444;">
+                    <i class="fas fa-envelope" style="color:#ef4444;"></i>
+                    <span id="unreadBadgeCount" style="position:absolute; top:-6px; right:-6px; background:#ef4444; color:#fff; border-radius:50%; font-size:10px; font-weight:bold; min-width:18px; height:18px; display:flex; align-items:center; justify-content:center; padding:0 4px;">0</span>
+                </button>
+            </div>
+            <div id="memberNotificationPopover" class="member-notification-popover" hidden role="dialog" aria-label="Message notifications">
+                <div class="member-insight-header">
+                    <div><span class="member-notification-kicker"><i class="fas fa-bell"></i> New notification</span><h4 id="memberNotificationTitle">Message notification</h4></div>
+                    <button type="button" class="member-insight-close" onclick="closeMemberNotification()" aria-label="Close message notification" title="Close">&times;</button>
+                </div>
+                <div id="memberNotificationBody" class="member-insight-body">Checking your messages...</div>
+                <div class="member-notification-actions">
+                    <button type="button" class="member-insight-link" onclick="openMessagesFromNotification()">Open Messages <i class="fas fa-arrow-right"></i></button>
+                    <button type="button" class="member-notification-sound" onclick="toggleNotificationSound()"><i class="fas fa-volume-up"></i> <span id="notificationSoundLabel">Sound on</span></button>
+                </div>
+            </div>
+            <!-- Streak Badge -->
+            <div id="streakBadgeHeader" style="display:none; position:relative;">
+                <button class="hamburger-btn" onclick="openMemberInsight('streak')" title="View your current progress"
+                    style="position:relative; background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.4); border-radius:8px; padding:6px 10px; cursor:pointer; color:#fbbf24;">
+                    <i class="fas fa-fire" style="color:#fbbf24;"></i>
+                    <span id="streakBadgeCount" style="position:absolute; top:-6px; right:-6px; background:#fbbf24; color:#000; border-radius:50%; font-size:10px; font-weight:bold; min-width:18px; height:18px; display:flex; align-items:center; justify-content:center; padding:0 4px;">0</span>
+                </button>
+            </div>
+            <div id="memberInsightPopover" class="member-insight-popover" hidden role="dialog" aria-label="Member progress update">
+                <div class="member-insight-header">
+                    <div><span class="member-insight-kicker"><i class="fas fa-sparkles"></i> Your update</span><h4 id="memberInsightTitle">Progress update</h4></div>
+                    <button type="button" class="member-insight-close" onclick="closeMemberInsight()" aria-label="Close progress update" title="Close">&times;</button>
+                </div>
+                <div id="memberInsightBody" class="member-insight-body">Loading your latest progress...</div>
+                <button type="button" class="member-insight-link" onclick="openMemberProgressFromInsight()">Open My Progress <i class="fas fa-arrow-right"></i></button>
+            </div>
+            <!-- Dark Mode Toggle -->
+            <button class="hamburger-btn" id="themeToggleBtn" title="Toggle Dark/Light Mode" onclick="toggleMemberTheme()" style="border-radius: 8px; transition: all 0.3s ease;">
+                <i class="fas fa-moon" id="themeIcon"></i>
+            </button>
+            <div class="user-profile-badge" id="userBadge" style="display: none; cursor: pointer; position:relative;" onclick="toggleUserProfilePopover()" aria-haspopup="true" aria-expanded="false">
+                <div class="profile-avatar" aria-hidden="true">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="profile-identity">
+                    <span id="badgeUsername" class="profile-name">profile</span>
+                    <span style="font-size:12px; opacity:0.7; margin-left:6px;">Profile</span>
+                </div>
+                <div id="userProfilePopover" style="display:none; position:absolute; right:0; top:48px; background:var(--bg-dark-panel); border:1px solid rgba(255,255,255,0.06); padding:10px; border-radius:8px; width:240px; z-index:300; box-shadow:0 14px 36px rgba(0,0,0,0.6);">
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <button class="action-btn" style="width:100%; text-align:left;" onclick="openProfileFeature('progress')"><i class="fas fa-fire"></i> View your current progression</button>
+                        <button class="action-btn" style="width:100%; text-align:left;" onclick="openProfileFeature('settings')"><i class="fas fa-sliders-h"></i> Profile settings</button>
+                        <button class="action-btn" style="width:100%; text-align:left;" onclick="openProfileFeature('security')"><i class="fas fa-user-shield"></i> Account security</button>
+                        <button class="action-btn" style="width:100%; text-align:left;" onclick="openProfileFeature('autoLogout')"><i class="fas fa-clock"></i> Auto-logout preferences</button>
+                        <button class="action-btn" style="width:100%; text-align:left; background:#b71c1c;" onclick="executeLogoutSequence()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="app-container">
+
+        <nav class="sidebar" id="sidebarMenu">
+            <ul class="nav-links">
+                <li><a href="#" class="nav-item active" data-target="dashboardSection"><i class="fas fa-chart-pie"></i>
+                        Dashboard</a></li>
+                <li><a href="#" class="nav-item" data-target="progressSection"><i class="fas fa-trophy"></i>
+                        My Progress</a></li>
+                <!-- auth link moved below system settings for easier access to Close Session -->
+                <li><a href="#" class="nav-item" data-target="takeLoanSection"><i class="fas fa-hand-holding-usd"></i>
+                        Request Loan</a></li>
+                <li><a href="#" class="nav-item" data-target="payLoanSection"><i class="fas fa-receipt"></i>
+                        Repayments</a></li>
+                <li><a href="#" class="nav-item" data-target="meetingsSection"><i class="fas fa-bolt"></i>
+                        Activities</a></li>
+                <li><a href="#" class="nav-item" data-target="reportsSection"><i class="fas fa-file-invoice-dollar"></i> Live Ledger</a></li>
+                <li><a href="#" class="nav-item" data-target="contributionsSection"><i class="fas fa-piggy-bank"></i> Contributions / Savings</a></li>
+                <li><a href="#" class="nav-item" data-target="expensesSection"><i class="fas fa-file-invoice"></i> Expense Claims</a></li>
+                <li><a href="#" class="nav-item" data-target="messagesSection" id="navMessagesLink">
+                    <i class="fas fa-envelope"></i> Messages
+                    <span id="navMsgBadge" style="display:none; background:#ef4444; color:#fff; border-radius:50%; font-size:10px; font-weight:bold; min-width:16px; height:16px; line-height:16px; text-align:center; padding:0 3px; margin-left:6px;">0</span>
+                </a></li>
+                <li><a href="#" class="nav-item" data-target="notificationsSection"><i class="fas fa-bell"></i> Notifications</a></li>
+                <li><a href="#" class="nav-item" data-target="contactSection"><i class="fas fa-headset"></i> Contact Admin</a></li>
+                <li><a href="#" class="nav-item" data-target="settingsSection"><i class="fas fa-sliders-h"></i> System
+                    Settings</a></li>
+                <li><a href="#" class="nav-item" data-target="authSection" id="navAuthLink"><i class="fas fa-sign-in-alt"></i> Close Session</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <p><i class="fas fa-headset"></i> Official Desk:</p>
+                <a href="#" id="sidebarPhoneLink" class="call-link"><i class="fas fa-phone-alt"></i> <span id="sidebarPhone">Loading...</span></a>
+                <span class="handler" id="sidebarHandler">Loading...</span>
+            </div>
+        </nav>
+
+        <main class="main-content">
+
+            <div class="alert-banner warning" id="approvalPendingBanner" style="display: none;">
+                <div class="banner-icon"><i class="fas fa-clock"></i></div>
+                <div class="banner-body">
+                    <h4>Account Pending Verification</h4>
+                    <p>Your access request has been securely transmitted to the Admin Portal (home.html). You will be
+                        granted system functionality once approved.</p>
+                </div>
+            </div>
+
+            <section id="authSection" class="content-section" style="display: none;">
+                <div class="auth-wrapper">
+                    <div class="auth-card">
+                        <h3><i class="fas fa-lock"></i> Account Authentication</h3>
+                        <form id="loginForm" onsubmit="handleMemberLogin(event)">
+                            <div class="form-group">
+                                <label for="loginIdentity">Email Address or Username</label>
+                                <input type="text" id="loginIdentity" name="identifier" autocomplete="username" inputmode="text" required placeholder="Enter your email address or username">
+                            </div>
+                            <div class="form-group">
+                                <label for="loginPassword">Password</label>
+                                <div style="position: relative;">
+                                    <input type="password" id="loginPassword" name="password" autocomplete="current-password" required placeholder="********" style="width: 100%; box-sizing: border-box; padding-right: 40px;">
+                                    <i class="fas fa-eye" style="position:absolute; right:12px; top:12px; color:#aaa; cursor:pointer;" onclick="togglePasswordVisibility('loginPassword', this)"></i>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Verify & Open Session</button>
+                            <div style="text-align: center; margin-top: 15px;">
+                                <button type="button" onclick="showRecoveryUI(event)" style="width: 100%; padding: 12px; margin-top: 10px; background: #ff9800; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 4px 15px rgba(255,152,0,0.3);"><i class="fas fa-shield-alt"></i> FORGOT PASSWORD / RECOVER ACCOUNT</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="auth-card">
+                        <h3><i class="fas fa-user-plus"></i> Join Membership</h3>
+                        <form id="registerForm" onsubmit="handleMemberRegister(event)">
+                            <div class="form-group">
+                                <label for="regName">Full Legal Name</label>
+                                <input type="text" id="regName" required placeholder="Name">
+                            </div>
+                            <div class="form-group">
+                                <label for="regEmail">Email Address</label>
+                                <input type="email" id="regEmail" name="email" autocomplete="email" required placeholder="name@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="regPhone">Mobile Phone Number</label>
+                                <input type="tel" id="regPhone" required placeholder="07********">
+                            </div>
+                            <div class="form-group">
+                                <label for="regPassword">Security Password</label>
+                                <div style="position: relative;">
+                                    <input type="password" id="regPassword" autocomplete="new-password" required placeholder="Create secure password" style="width: 100%; box-sizing: border-box; padding-right: 40px;">
+                                    <i class="fas fa-eye" style="position:absolute; right:12px; top:12px; color:#aaa; cursor:pointer;" onclick="togglePasswordVisibility('regPassword', this)"></i>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="regPin">4-Digit Security PIN (For Transactions)</label>
+                                <div style="position: relative;">
+                                    <input type="password" id="regPin" autocomplete="new-password" required maxlength="4" pattern="[0-9]{4}" placeholder="e.g. 1234" style="width: 100%; box-sizing: border-box; padding-right: 40px;">
+                                    <i class="fas fa-eye" style="position:absolute; right:12px; top:12px; color:#aaa; cursor:pointer;" onclick="togglePasswordVisibility('regPin', this)"></i>
+                                </div>
+                                <small style="color:#aaa;">You will need this PIN to request loans or make payments.</small>
+                            </div>
+                            <button type="submit" class="btn btn-success btn-block">Submit Membership File</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Password Recovery Modal (Hidden by default) -->
+                <div id="recoveryModal" class="auth-wrapper" style="display: none; margin-top: 20px;">
+                    <div class="auth-card" style="width: 100%; max-width: 450px; margin: 0 auto; border-top: 4px solid var(--orange);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="margin: 0;"><i class="fas fa-shield-alt text-orange"></i> Secure Account Recovery</h3>
+                            <button onclick="hideRecoveryUI()" style="background: none; border: none; color: var(--text-light); cursor: pointer; font-size: 16px;"><i class="fas fa-times"></i></button>
+                        </div>
+                        
+                        <!-- Step 1: Request Password Reset -->
+                        <div id="recoveryStep1">
+                            <p style="font-size: 13px; color: var(--text-light); margin-bottom: 15px;">Enter your registered email address. We will generate a secure reset link to verify your identity.</p>
+                            <form onsubmit="requestPasswordReset(event)">
+                                <div class="form-group">
+                                    <label for="recoveryEmail">Registered Email Address</label>
+                                    <input type="email" id="recoveryEmail" name="email" autocomplete="email" required placeholder="Enter your account email">
+                                </div>
+                                <button type="submit" id="btnRequestReset" class="btn btn-primary btn-block" style="background: #0077ff; border-color: #0077ff; font-weight: bold; margin-top: 10px;">Send Password Reset Link</button>
+                            </form>
+                            
+                            <!-- Area to show simulated email link -->
+                            <div id="simulatedEmailBox" style="display: none; margin-top: 15px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; font-size: 12px; word-break: break-all;">
+                                <strong>Simulated Email:</strong><br>
+                                Click this link to reset your password: <br>
+                                <a href="#" id="simulatedEmailLink" style="font-weight: bold; color: var(--primary);"></a>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Password Reset (Visible if token present) -->
+                        <div id="recoveryStep3" style="display: none;">
+                            <div class="alert-banner" style="background: rgba(76,175,80,0.1); border-left: 4px solid var(--success); padding: 10px; margin-bottom: 15px;">
+                                <p style="margin: 0; font-size: 13px; color: var(--success);"><i class="fas fa-check-circle"></i> Token verified. Please enter your new password below.</p>
+                            </div>
+                            <form onsubmit="submitAIVerifiedRecovery(event)">
+                                <div class="form-group">
+                                    <label for="recoveryNewPassword">Create New Secure Password</label>
+                                    <div style="position: relative;">
+                                        <input type="password" id="recoveryNewPassword" autocomplete="new-password" required placeholder="Enter new password" style="width: 100%; box-sizing: border-box; padding-right: 40px;">
+                                        <i class="fas fa-eye" style="position:absolute; right:12px; top:12px; color:#aaa; cursor:pointer;" onclick="togglePasswordVisibility('recoveryNewPassword', this)"></i>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-success btn-block">Update Password</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="dashboardSection" class="content-section">
+                <div class="dashboard-header dashboard-header-v2">
+                    <div class="dashboard-header-copy">
+                        <span class="eyebrow">Member Dashboard</span>
+                        <h2>Operational Insights & Member Momentum</h2>
+                        <p>Track loan health, repayment progress, meeting activity and your admin connection from one responsive dashboard.</p>
+                    </div>
+                    <div class="dashboard-header-actions">
+                        <button type="button" class="btn btn-secondary" onclick="document.querySelector('.nav-item[data-target=payLoanSection]')?.click()">Make Repayment</button>
+                        <button type="button" class="btn btn-primary" onclick="document.querySelector('.nav-item[data-target=takeLoanSection]')?.click()">Request Loan</button>
+                        <button type="button" class="btn btn-success" onclick="document.querySelector('.nav-item[data-target=meetingsSection]')?.click()">View Activities</button>
+                    </div>
+                </div>
+
+                <div class="metrics-grid dashboard-metrics-grid">
+                    <div class="tile-card summary-blue">
+                        <div class="tile-body">
+                            <span class="tile-title">Loans Taken</span>
+                            <h2 class="tile-value" id="tileLoansTaken">Ksh 0.00</h2>
+                        </div>
+                        <div class="tile-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                    </div>
+                    <div class="tile-card summary-green">
+                        <div class="tile-body">
+                            <span class="tile-title">Loans Repaid</span>
+                            <h2 class="tile-value" id="tileLoansPaid">Ksh 0.00</h2>
+                        </div>
+                        <div class="tile-icon"><i class="fas fa-cloud-download-alt"></i></div>
+                    </div>
+                    <div class="tile-card summary-orange">
+                        <div class="tile-body">
+                            <span class="tile-title">Active Outstandings</span>
+                            <h2 class="tile-value" id="tileActiveLoans">0</h2>
+                        </div>
+                        <div class="tile-icon"><i class="fas fa-exclamation-circle"></i></div>
+                    </div>
+                    <div class="tile-card summary-purple">
+                        <div class="tile-body">
+                            <span class="tile-title">Activities Attended</span>
+                            <h2 class="tile-value" id="tileMeetingsJoined">0</h2>
+                        </div>
+                        <div class="tile-icon"><i class="fas fa-handshake"></i></div>
+                    </div>
+                    <div class="tile-card summary-cyan">
+                        <div class="tile-body">
+                            <span class="tile-title">Health Score</span>
+                            <h2 class="tile-value" id="tileHealthScore">100%</h2>
+                        </div>
+                        <div class="tile-icon"><i class="fas fa-heartbeat"></i></div>
+                    </div>
+                    <div class="tile-card summary-red">
+                        <div class="tile-body">
+                            <span class="tile-title">Groups Vacated</span>
+                            <h2 class="tile-value" id="tileGroupsLeft">0</h2>
+                        </div>
+                        <div class="tile-icon"><i class="fas fa-door-open"></i></div>
+                    </div>
+                    <div class="tile-card summary-teal">
+                        <div class="tile-body">
+                            <span class="tile-title">Registered Pool</span>
+                            <h2 class="tile-value" id="tileTotalMembers">0</h2>
+                        </div>
+                        <div class="tile-icon"><i class="fas fa-users-cog"></i></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-panel-grid">
+                    <div class="panel-card">
+                        <div class="panel-card-heading">
+                            <h3><i class="fas fa-chart-line text-success"></i> Repayment Health</h3>
+                            <p class="subtitle text-muted">Your loan repayment performance and pace toward full settlement.</p>
+                        </div>
+                        <div class="dashboard-repayment-panel">
+                            <div class="panel-summary-row">
+                                <div>Repayment Progress</div>
+                                <strong id="repaymentProgressText">0% Paid Off</strong>
+                            </div>
+                            <div class="progress-track">
+                                <div id="repaymentProgressBar" class="progress-fill"></div>
+                            </div>
+                            <p class="panel-note">Progress is based on total loans taken versus total amount successfully repaid.</p>
+                        </div>
+                    </div>
+
+                    <div class="panel-card">
+                        <div class="panel-card-heading">
+                            <h3><i class="fas fa-fire text-warning"></i> Member Pulse</h3>
+                            <p class="subtitle text-muted">Daily check-in streak, unread updates, and active participation signals.</p>
+                        </div>
+                        <div id="checkinWidget" class="checkin-widget" style="display: none;">
+                            <div class="checkin-panel-row">
+                                <div class="checkin-summary">
+                                    <div class="checkin-streak-ring" id="checkinRing">
+                                        <svg viewBox="0 0 80 80">
+                                            <circle cx="40" cy="40" r="34" class="checkin-ring-track"></circle>
+                                            <circle cx="40" cy="40" r="34" class="checkin-ring-fill" id="checkinRingFill"></circle>
+                                        </svg>
+                                        <div class="checkin-ring-center">
+                                            <span id="checkinStreakNum">0</span>
+                                            <small>days</small>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4>Daily Check-In Streak</h4>
+                                        <p class="subtitle text-muted" id="checkinSubtitle">Open the app daily to build your streak!</p>
+                                        <p class="panel-note" id="checkinLongest">Longest streak: 0 days</p>
+                                    </div>
+                                </div>
+                                <div class="checkin-actions">
+                                    <button class="btn btn-primary" id="checkinBtn" onclick="performDailyCheckin()"><i class="fas fa-check-circle"></i> <span id="checkinBtnText">Check In Today</span></button>
+                                    <button class="btn btn-secondary" id="checkinUnreadBtn" onclick="handleCheckinUnreadClick()" title="Mark admin messages as read" style="display:none;"><i class="fas fa-envelope"></i> <span id="checkinUnreadCount">0</span></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-panel-grid">
+                    <div class="panel-card daily-message-card" style="display: none;" id="dailyMessageWrapper">
+                        <div class="panel-card-heading">
+                            <h3><i class="fas fa-comments text-primary"></i> Daily Message</h3>
+                        </div>
+                        <div id="dailyMessageBox" class="dashboard-notice-card" style="display: block;">
+                            <div class="daily-message-inner">
+                                <div class="daily-message-icon" id="dailyMessageIcon"></div>
+                                <div class="daily-message-copy">
+                                    <h4 id="dailyMessageTitle"></h4>
+                                    <p id="dailyMessageText"></p>
+                                    <a href="#" id="dailyMessageLink"></a>
+                                </div>
+                                <button onclick="document.getElementById('dailyMessageBox').style.display='none'" class="icon-button" title="Dismiss"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-card timeline-card" style="display: none;" id="timelineWrapper">
+                        <div class="panel-card-heading">
+                            <h3><i class="fas fa-stream text-info"></i> Member Timeline</h3>
+                            <p class="subtitle text-muted">Recent contributions, payments, meetings, and activity updates.</p>
+                        </div>
+                        <div class="timeline-list" id="memberTimelineList">Loading timeline...</div>
+                    </div>
+                </div>
+
+                <div class="dashboard-panel-grid">
+                    <div class="panel-card">
+                        <div class="panel-card-heading">
+                            <h3><i class="fas fa-bell text-orange"></i> Live System Updates</h3>
+                            <p class="subtitle text-muted">Latest meeting updates, loan events and admin notifications.</p>
+                        </div>
+                        <hr>
+                        <div class="notification-stream" id="memberNotificationFeed"></div>
+                    </div>
+
+                    <div class="panel-card admin-contact-card">
+                        <div class="panel-card-heading">
+                            <h3><i class="fas fa-user-shield text-primary"></i> Assigned Admin Officer</h3>
+                            <p class="subtitle text-muted" id="adminContactHint">Loading your assigned officer...</p>
+                        </div>
+                        <hr>
+                        <div class="admin-contact-grid">
+                            <div class="info-card info-card-primary">
+                                <span class="info-card-label">Name</span>
+                                <strong id="adminNameDisplay">Loading...</strong>
+                            </div>
+                            <div class="info-card info-card-success">
+                                <span class="info-card-label">Phone</span>
+                                <strong id="adminPhoneDisplay">Loading...</strong>
+                            </div>
+                            <div class="info-card info-card-warning">
+                                <span class="info-card-label">Email</span>
+                                <strong id="adminEmailDisplay">Loading...</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-panel-grid">
+                    <div id="memberRoadmapPanel" class="panel-card" style="display: none;">
+                        <div class="panel-card-heading">
+                            <h3><i class="fas fa-compass text-info"></i> Member Roadmap</h3>
+                            <p class="subtitle text-muted">A short, prioritized action plan to keep your loan, savings and messages moving forward.</p>
+                        </div>
+                        <hr>
+                        <div id="memberRoadmapCards" class="roadmap-grid"></div>
+                    </div>
+                </div>
+
+                <div id="nextActionPanel" class="panel-card" style="margin-bottom: 20px; border-left: 4px solid var(--success); display: none;">
+                    <h4 style="margin: 0 0 8px;"><i class="fas fa-arrow-right" style="color: var(--success);"></i> Your Next Best Action</h4>
+                    <p style="margin: 0; font-size: 14px; line-height: 1.5;" id="nextActionText"></p>
+                </div>
+            </section><!-- end dashboardSection -->
+
+            <!-- My Progress — Consolidated Engagement View -->
+            <section id="progressSection" class="content-section" style="display: none;">
+                <h2><i class="fas fa-trophy" style="color: #fbbf24;"></i> My Progress</h2>
+                <p class="text-muted">Your financial journey at a glance — streaks, milestones, and what's next.</p>
+
+                <div class="metrics-grid" style="margin-bottom: 20px;">
+                    <!-- Streak Tile -->
+                    <div class="tile-card summary-orange">
+                        <div class="tile-body">
+                            <span class="tile-title">Check-In Streak</span>
+                            <h2 class="tile-value" id="progressStreak">0 days</h2>
+                        </div>
+                        <div class="tile-icon"><i class="fas fa-fire" style="color: #fbbf24;"></i></div>
+                    </div>
+                    <!-- Badges Tile -->
+                    <div class="tile-card summary-purple">
+                        <div class="tile-body">
+                            <span class="tile-title">Badges Earned</span>
+                            <h2 class="tile-value" id="progressBadges">0 / 0</h2>
+                        </div>
+                        <div class="tile-icon"><i class="fas fa-award" style="color: var(--purple);"></i></div>
+                    </div>
+                    <!-- Savings Tile -->
+                    <div class="tile-card summary-teal">
+                        <div class="tile-body">
+                            <span class="tile-title">Total Saved</span>
+                            <h2 class="tile-value" id="progressSaved">KES 0</h2>
+                        </div>
+                        <div class="tile-icon"><i class="fas fa-piggy-bank" style="color: var(--teal);"></i></div>
+                    </div>
+                    <!-- Repayment Tile -->
+                    <div class="tile-card summary-green">
+                        <div class="tile-body">
+                            <span class="tile-title">Loan Repaid</span>
+                            <h2 class="tile-value" id="progressRepaid">KES 0</h2>
+                        </div>
+                        <div class="tile-icon"><i class="fas fa-check-circle" style="color: var(--success);"></i></div>
+                    </div>
+                </div>
+
+                <!-- Loan Progress (if active) -->
+                <div id="progressLoanPanel" class="panel-card" style="margin-bottom: 20px; display: none;">
+                    <h3><i class="fas fa-chart-line text-success"></i> Active Loan Progress</h3>
+                    <div id="progressLoanCards"></div>
+                </div>
+
+                <!-- Badges Collection -->
+                <div class="panel-card" style="margin-bottom: 20px;">
+                    <h3><i class="fas fa-award" style="color: #c084fc;"></i> Achievements & Badges</h3>
+                    <p class="subtitle text-muted">Milestones you've earned through real activity.</p>
+                    <hr>
+                    <div id="progressBadgesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-top: 12px;">
+                        <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 13px;">Loading badges...</div>
+                    </div>
+                </div>
+
+                <div id="impactNarrativePanel" class="panel-card" style="margin-bottom: 20px; border-left: 4px solid #0ea5e9; display: none;">
+                    <h3><i class="fas fa-lightbulb text-info"></i> Why this system matters</h3>
+                    <p class="subtitle text-muted">Dynamic answers for members and the treasurer that explain the system's value, impact, and market appeal.</p>
+                    <hr>
+                    <div class="impact-answers-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 14px;">
+                        <div class="impact-answer-card" style="background: var(--bg-dark-core); border: 1px solid var(--bg-dark-accent); border-radius: 12px; padding: 16px;">
+                            <h4 style="margin: 0 0 8px; font-size: 0.95rem;">Why we need this system</h4>
+                            <p id="impactAnswerNeed" style="margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-muted);">Loading...</p>
+                        </div>
+                        <div class="impact-answer-card" style="background: var(--bg-dark-core); border: 1px solid var(--bg-dark-accent); border-radius: 12px; padding: 16px;">
+                            <h4 style="margin: 0 0 8px; font-size: 0.95rem;">Is it improving lives?</h4>
+                            <p id="impactAnswerImprove" style="margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-muted);">Loading...</p>
+                        </div>
+                        <div class="impact-answer-card" style="background: var(--bg-dark-core); border: 1px solid var(--bg-dark-accent); border-radius: 12px; padding: 16px;">
+                            <h4 style="margin: 0 0 8px; font-size: 0.95rem;">Can we live without it?</h4>
+                            <p id="impactAnswerLiveWithout" style="margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-muted);">Loading...</p>
+                        </div>
+                        <div class="impact-answer-card" style="background: var(--bg-dark-core); border: 1px solid var(--bg-dark-accent); border-radius: 12px; padding: 16px;">
+                            <h4 style="margin: 0 0 8px; font-size: 0.95rem;">Market impact and demand</h4>
+                            <p id="impactAnswerMarket" style="margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-muted);">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="financialPassportPanel" class="panel-card" style="margin-bottom:20px; display:none;">
+                    <h3><i class="fas fa-id-card text-primary"></i> Financial Passport</h3>
+                    <p class="subtitle text-muted">A quick summary of your financial profile, savings behavior, and credit reliability.</p>
+                    <hr>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 14px;">
+                        <div style="background: rgba(15,23,42,0.95); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px;">
+                            <div style="font-size: 0.8rem; color: #8b94a3; text-transform: uppercase; letter-spacing: 0.08em;">Reliability</div>
+                            <div id="passportReliability" style="font-size:1.25rem; font-weight:700; margin-top:8px;">--</div>
+                        </div>
+                        <div style="background: rgba(15,23,42,0.95); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px;">
+                            <div style="font-size: 0.8rem; color: #8b94a3; text-transform: uppercase; letter-spacing: 0.08em;">Savings Habit</div>
+                            <div id="passportSavingsHabit" style="font-size:1.25rem; font-weight:700; margin-top:8px;">--</div>
+                        </div>
+                        <div style="background: rgba(15,23,42,0.95); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px;">
+                            <div style="font-size: 0.8rem; color: #8b94a3; text-transform: uppercase; letter-spacing: 0.08em;">Loan History</div>
+                            <div id="passportLoanBehavior" style="font-size:1.25rem; font-weight:700; margin-top:8px;">--</div>
+                        </div>
+                        <div style="background: rgba(15,23,42,0.95); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px;">
+                            <div style="font-size: 0.8rem; color: #8b94a3; text-transform: uppercase; letter-spacing: 0.08em;">Attendance</div>
+                            <div id="passportAttendance" style="font-size:1.25rem; font-weight:700; margin-top:8px;">--</div>
+                        </div>
+                        <div style="background: rgba(15,23,42,0.95); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px;">
+                            <div style="font-size: 0.8rem; color: #8b94a3; text-transform: uppercase; letter-spacing: 0.08em;">Goal Status</div>
+                            <div id="passportGoalStatus" style="font-size:1.25rem; font-weight:700; margin-top:8px;">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next Best Action -->
+                <div id="nextActionPanel" class="panel-card" style="margin-bottom: 20px; border-left: 4px solid var(--success); display: none;">
+                    <h4 style="margin: 0 0 8px;"><i class="fas fa-arrow-right" style="color: var(--success);"></i> Your Next Best Action</h4>
+                    <p style="margin: 0; font-size: 14px; line-height: 1.5;" id="nextActionText"></p>
+                </div>
+            </section>
+
+            <section id="takeLoanSection" class="content-section" style="display: none;">
+                <div class="panel-card max-width-md">
+                    <h3><i class="fas fa-hand-holding-usd text-primary"></i> Form: Capital Borrowing Application</h3>
+                    <hr>
+                    <form id="takeLoanForm" onsubmit="processLoanApplication(event)">
+                        <div class="form-group">
+                            <label>Principal Amount Required (Ksh)</label>
+                            <input type="number" id="loanAmount" min="50" required placeholder="e.g. 25000">
+                        </div>
+                        <div class="form-group">
+                            <label>Amortization Window (Months)</label>
+                            <input type="number" id="loanDuration" min="1" max="36" required placeholder="e.g. 12">
+                        </div>
+                        <div class="form-group">
+                            <label>Assigned Annual Interest Rate (%)</label>
+                            <input type="number" id="loanInterest" value="12" readonly style="opacity:0.7;">
+                            <small style="color:#888;">Set by administrator</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary ActionRestricted">File Loan Request</button>
+                    </form>
+                </div>
+            </section>
+
+            <section id="payLoanSection" class="content-section" style="display: none;">
+                <div class="panel-card max-width-md">
+                    <h3><i class="fas fa-receipt text-success"></i> Settlement Ledger Portal</h3>
+                    <hr>
+                    <form id="payLoanForm" onsubmit="processLoanSettlement(event)">
+                        <div class="form-group">
+                            <label>Select Target Outbound Loan File</label>
+                            <select id="payLoanSelect" required>
+                                <option value="">-- No active outstanding balances detected --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Repayment Installment (Ksh) — Minimum Ksh 1, partial payments allowed</label>
+                            <input type="number" id="payAmount" min="1" step="0.01" required placeholder="Enter amount (min Ksh 1)">
+                            <small class="text-muted" id="payLoanBalanceHint"></small>
+                        </div>
+                        <div class="form-group">
+                            <label>Payment Channel</label>
+                            <div class="radio-group-container">
+                                <label class="radio-label"><input type="radio" name="payMethod" value="M-Pesa" checked>
+                                    Mobile Money (M-Pesa)</label>
+                                <label class="radio-label"><input type="radio" name="payMethod" value="Bank">
+                                    Institution Wire Transfer</label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success ActionRestricted">Process Remittance</button>
+                    </form>
+                </div>
+
+                <!-- Loan Payoff Progress -->
+                <div id="loanPayoffPanel" class="panel-card" style="margin-top: 20px; display: none;">
+                    <h3><i class="fas fa-chart-line text-success"></i> Loan Payoff Progress</h3>
+                    <p class="subtitle text-muted">Track your repayment journey and see when you'll be debt-free.</p>
+                    <hr>
+                    <div id="loanPayoffCards"></div>
+                </div>
+            </section>
+
+            <section id="meetingsSection" class="content-section" style="display: none;">
+                <div class="panel-card">
+                    <h3><i class="fas fa-bolt text-purple"></i> Member Activities</h3>
+                    <p class="subtitle text-muted">Select an activity below to get started.</p>
+                    <hr>
+
+                    <!-- Activity Cards Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; margin-top: 20px;">
+
+                        <!-- 1. Send Email to Admin -->
+                        <div style="background: linear-gradient(135deg, rgba(255,152,0,0.12), rgba(255,152,0,0.04)); border: 1px solid rgba(255,152,0,0.35); border-radius: 16px; padding: 28px 24px; display: flex; flex-direction: column; gap: 14px; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 32px rgba(255,152,0,0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                            <div style="display: flex; align-items: center; gap: 14px;">
+                                <div style="width: 52px; height: 52px; border-radius: 12px; background: rgba(255,152,0,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <i class="fas fa-envelope" style="font-size: 1.5rem; color: #ff9800;"></i>
+                                </div>
+                                <div>
+                                    <h4 style="margin: 0 0 4px; font-size: 1.05rem; color: #ff9800;">Send Email to Admin</h4>
+                                    <p style="margin: 0; font-size: 12px; color: #888;">Compose and send a direct email message to your assigned administrator.</p>
+                                </div>
+                            </div>
+                            <form id="activityEmailForm" onsubmit="sendActivityEmailToAdmin(event)" style="display: flex; flex-direction: column; gap: 10px;">
+                                <input type="text" id="actEmailSubject" placeholder="Subject" required style="padding: 9px 13px; border-radius: 8px; border: 1px solid rgba(255,152,0,0.3); background: rgba(255,255,255,0.04); color: inherit; font-size: 13px;">
+                                <textarea id="actEmailBody" rows="3" placeholder="Write your message..." required style="padding: 9px 13px; border-radius: 8px; border: 1px solid rgba(255,152,0,0.3); background: rgba(255,255,255,0.04); color: inherit; font-size: 13px; resize: vertical;"></textarea>
+                                <button type="submit" style="padding: 10px; border-radius: 8px; border: none; background: #ff9800; color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#e68900';" onmouseout="this.style.background='#ff9800';"><i class="fas fa-paper-plane"></i> Send Email</button>
+                            </form>
+                            <div id="actEmailStatus" style="font-size: 12px; min-height: 16px;"></div>
+                        </div>
+
+                        <!-- 2. Print Ledger & Savings -->
+                        <div style="background: linear-gradient(135deg, rgba(0,224,255,0.10), rgba(0,224,255,0.03)); border: 1px solid rgba(0,224,255,0.3); border-radius: 16px; padding: 28px 24px; display: flex; flex-direction: column; gap: 14px; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 32px rgba(0,224,255,0.15)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                            <div style="display: flex; align-items: center; gap: 14px;">
+                                <div style="width: 52px; height: 52px; border-radius: 12px; background: rgba(0,224,255,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <i class="fas fa-print" style="font-size: 1.5rem; color: #00e0ff;"></i>
+                                </div>
+                                <div>
+                                    <h4 style="margin: 0 0 4px; font-size: 1.05rem; color: #00e0ff;">Print Ledger &amp; Savings</h4>
+                                    <p style="margin: 0; font-size: 12px; color: #888;">Generate a printable statement of your transactions and savings records.</p>
+                                </div>
+                            </div>
+                            <p style="font-size: 13px; color: #aaa; margin: 0;">Your ledger includes all loan records, repayments, contributions, and current savings balance.</p>
+                            <div style="display: flex; gap: 10px;">
+                                <button type="button" onclick="printMemberLedger()" style="flex: 1; padding: 10px; border-radius: 8px; border: none; background: #00bcd4; color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#0097a7';" onmouseout="this.style.background='#00bcd4';"><i class="fas fa-file-invoice-dollar"></i> Print Ledger</button>
+                                <button type="button" onclick="printMemberSavings()" style="flex: 1; padding: 10px; border-radius: 8px; border: none; background: #4caf50; color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#388e3c';" onmouseout="this.style.background='#4caf50';"><i class="fas fa-piggy-bank"></i> Print Savings</button>
+                            </div>
+                        </div>
+
+                        <!-- 3. Active & Past Meetings -->
+                        <div style="background: linear-gradient(135deg, rgba(156,39,176,0.12), rgba(156,39,176,0.04)); border: 1px solid rgba(156,39,176,0.35); border-radius: 16px; padding: 28px 24px; display: flex; flex-direction: column; gap: 14px;">
+                            <div style="display: flex; align-items: center; gap: 14px;">
+                                <div style="width: 52px; height: 52px; border-radius: 12px; background: rgba(156,39,176,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <i class="fas fa-calendar-alt" style="font-size: 1.5rem; color: #ce93d8;"></i>
+                                </div>
+                                <div>
+                                    <h4 style="margin: 0 0 4px; font-size: 1.05rem; color: #ce93d8;">Meetings</h4>
+                                    <p style="margin: 0; font-size: 12px; color: #888;">Click a button to view active or past meetings scheduled by your admin.</p>
+                                </div>
+                            </div>
+
+                            <!-- Active Meetings Dropdown -->
+                            <div>
+                                <button type="button" onclick="toggleMeetingPanel('activeMeetingsPanel', this)"
+                                    style="width:100%; padding:10px 16px; border-radius:8px; border:none; background:#9c27b0; color:#fff; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+                                    <span><i class="fas fa-video"></i> Active Meetings</span>
+                                    <i class="fas fa-chevron-down" id="activeMeetingsChevron"></i>
+                                </button>
+                                <div id="activeMeetingsPanel" style="display:none; border:1px solid rgba(156,39,176,0.3); border-radius:0 0 8px 8px; overflow:hidden;">
+                                    <div id="activeMeetingsList" style="max-height:280px; overflow-y:auto;">
+                                        <div style="padding:20px; text-align:center; color:#888; font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        <div style="background: linear-gradient(135deg, rgba(63,81,181,0.12), rgba(63,81,181,0.04)); border: 1px solid rgba(63,81,181,0.25); border-radius: 16px; padding: 24px; margin-bottom: 10px; color: #e0e0e0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+                                <div>
+                                    <h4 style="margin:0 0 6px 0; font-size:1rem; color:#9fa8da;"><i class="fas fa-link"></i> Latest Meeting Link</h4>
+                                    <p style="margin:0; font-size:12px; color:#b0bec5;">Your administrator's current meeting URL will appear here when available.</p>
+                                </div>
+                                <a id="meetingJoinBtn" class="btn btn-primary" href="#" target="_blank" style="display:none; white-space:nowrap; padding:10px 16px; border-radius:10px;">
+                                    <i class="fas fa-sign-in-alt"></i> Join Meeting
+                                </a>
+                            </div>
+                            <div id="meetingLinkText" style="min-height:72px; padding:16px; border-radius:12px; background:rgba(0,0,0,0.16); border:1px solid rgba(63,81,181,0.18); color:#d0d0d0; display:flex; align-items:center;">
+                                Fetching the latest meeting link...
+                            </div>
+                        </div>
+
+                            <!-- Past Meetings Dropdown -->
+                            <div>
+                                <button type="button" onclick="toggleMeetingPanel('pastMeetingsPanel', this)"
+                                    style="width:100%; padding:10px 16px; border-radius:8px; border:none; background:#5e35b1; color:#fff; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+                                    <span><i class="fas fa-history"></i> Past Meetings</span>
+                                    <i class="fas fa-chevron-down" id="pastMeetingsChevron"></i>
+                                </button>
+                                <div id="pastMeetingsPanel" style="display:none; border:1px solid rgba(94,53,177,0.3); border-radius:0 0 8px 8px; overflow:hidden;">
+                                    <div id="pastMeetingsList" style="max-height:280px; overflow-y:auto;">
+                                        <div style="padding:20px; text-align:center; color:#888; font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div><!-- end activity grid -->
+                </div>
+            </section>
+
+            <section id="reportsSection" class="content-section" style="display: none;">
+                <div class="panel-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3><i class="fas fa-file-invoice-dollar text-teal"></i> Live Ledger</h3>
+                        <div style="display: flex; gap: 8px;">
+                            <select id="ledgerTypeFilter" onchange="rebuildMetricsDashboard()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #444; background: var(--bg-dark-panel); color: var(--text-primary); font-size: 0.85rem;">
+                                <option value="all">All Types</option>
+                                <option value="Loan">Loans</option>
+                                <option value="Repayment">Repayments</option>
+                                <option value="Contribution">Contributions</option>
+                                <option value="Expense">Expenses</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="printMemberLedger()" style="padding: 5px 12px; font-size: 0.85rem;"><i class="fas fa-print"></i> Print</button>
+                        </div>
+                    </div>
+                    <div id="ledgerSummaryCards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px;"></div>
+                    <hr>
+                    <div class="table-responsive">
+                        <table class="data-table-element">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Type</th>
+                                    <th>Amount (Ksh)</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Remaining Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody id="memberReportTableBody">
+                                <tr>
+                                    <td colspan="6" style="text-align: center;" class="text-muted">No transactions recorded yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="contributionsSection" class="content-section" style="display: none;">
+                <!-- Savings Goal Tracker -->
+                <div id="savingsGoalPanel" class="panel-card" style="margin-bottom: 20px; display: none;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <div class="savings-ring-container">
+                                <svg viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="42" class="savings-ring-track"></circle>
+                                    <circle cx="50" cy="50" r="42" class="savings-ring-fill" id="savingsRingFill"></circle>
+                                </svg>
+                                <div class="savings-ring-center">
+                                    <span id="savingsPctValue">0%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0 0 4px; font-size: 0.95rem;"><i class="fas fa-bullseye" style="color: var(--teal);"></i> <span id="savingsGoalLabel">Savings Goal</span></h4>
+                                <p style="margin: 0; font-size: 13px;" id="savingsGoalProgress">Set a goal to start tracking</p>
+                                <p style="margin: 2px 0 0; font-size: 11px; color: var(--text-muted);" id="savingsGoalPace"></p>
+                            </div>
+                        </div>
+                        <button class="btn btn-success" onclick="openSavingsGoalModal()" style="white-space: nowrap; font-size: 13px;">
+                            <i class="fas fa-bullseye"></i> <span id="savingsGoalBtnText">Set Goal</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3><i class="fas fa-piggy-bank text-success"></i> My Contributions & Savings</h3>
+                        <button class="btn btn-primary" onclick="openPaymentModal()"><i class="fas fa-plus"></i> Record Payment</button>
+                    </div>
+                    <hr>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Payment Method</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contributionsListBody">
+                                <tr><td colspan="4" style="text-align: center;" class="text-muted">Loading contributions...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="expensesSection" class="content-section" style="display: none;">
+                <div class="panel-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3><i class="fas fa-file-invoice text-warning"></i> My Expense Claims</h3>
+                        <button class="btn btn-primary" onclick="openExpenseModal()"><i class="fas fa-plus"></i> Submit Expense</button>
+                    </div>
+                    <hr>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Category</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expensesListBody">
+                                <tr><td colspan="4" style="text-align: center;" class="text-muted">Loading expense claims...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="messagesSection" class="content-section" style="display: none;">
+                <div class="panel-card">
+                    <div class="messages-hero">
+                        <div>
+                            <span class="messages-eyebrow"><i class="fas fa-comments"></i> Direct line</span>
+                            <h3><i class="fas fa-envelope text-primary"></i> Messages</h3>
+                            <p class="subtitle text-muted">A private thread for questions, updates, and decisions with your administrator.</p>
+                        </div>
+                        <span id="msgUnreadIndicator" class="message-unread-indicator"><i class="fas fa-circle"></i> Unread from admin</span>
+                    </div>
+                    <div class="messages-compose-card">
+                        <div class="messages-compose-heading"><span class="messages-compose-icon"><i class="fas fa-pen"></i></span><div><h4>Compose a message</h4><p>Keep the subject specific so your admin can respond quickly.</p></div></div>
+                        <form id="messageComposeForm" onsubmit="sendMessageToAdmin(event)">
+                            <div class="form-group">
+                                <label for="msgSubject">Subject</label>
+                                <input type="text" id="msgSubject" placeholder="What is this about?" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="msgBody">Message</label>
+                                <textarea id="msgBody" rows="4" placeholder="Write your message here..." required></textarea>
+                            </div>
+                            <div class="messages-compose-actions"><button type="submit" class="btn btn-primary" id="btnSendMessage"><i class="fas fa-paper-plane"></i> Send Message</button><span id="sendMessageStatus"></span></div>
+                        </form>
+                    </div>
+                    <div class="messages-thread-heading"><h4><i class="fas fa-inbox"></i> Conversation</h4><span>Newest updates appear first</span></div>
+                    <div id="messagesInboxList" class="messages-inbox-list">
+                        <div class="messages-empty-state"><i class="fas fa-spinner fa-spin"></i> Loading messages...</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="notificationsSection" class="content-section" style="display: none;">
+                <div class="panel-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3><i class="fas fa-bell text-primary"></i> Activity & Alerts</h3>
+                        <select id="notificationTypeFilter" onchange="renderNotificationsFeed()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #444; background: var(--bg-dark-panel); color: var(--text-primary); font-size: 0.85rem;">
+                            <option value="all">All Activity</option>
+                            <option value="loan">Loan Updates</option>
+                            <option value="contribution">Contributions</option>
+                            <option value="expense">Expenses</option>
+                            <option value="security">Security</option>
+                            <option value="system">System</option>
+                        </select>
+                    </div>
+                    <p class="subtitle text-muted" style="font-size: 0.85rem;">Real-time notifications from your account activity.</p>
+                    <hr>
+                    <div class="notification-stream" id="memberNotificationFeedExtended">
+                        <div class="text-muted" style="text-align:center; padding:2rem;">Loading activity...</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="contactSection" class="content-section" style="display: none;">
+                <div class="panel-card max-width-md">
+                    <h3><i class="fas fa-comments text-primary"></i> Internal Communications</h3>
+                    <p class="subtitle text-muted">Direct WhatsApp line to your assigned administrator.</p>
+                    <div class="chat-outer-box" style="min-height: 400px; margin-top: 15px;">
+                        <div class="chat-header">
+                            <span>Admin WhatsApp Contact</span>
+                            <small id="contactAdminHint">Loading admin details...</small>
+                        </div>
+                        <div class="chat-history-window" id="chatWindow" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px;">
+                            <div style="font-size: 48px; margin-bottom: 15px;"></div>
+                            <div id="adminDetailsDisplay" style="width: 100%;">
+                                <p style="color: #94a3b8; margin-bottom: 10px;">Admin Contact Information</p>
+                                <div style="background: rgba(56, 189, 248, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #38bdf8; margin: 10px 0;">
+                                    <p style="margin: 5px 0;"><strong>Name:</strong> <span id="contactAdminName">Loading...</span></p>
+                                    <p style="margin: 5px 0;"><strong>Phone:</strong> <span id="contactAdminPhone">Loading...</span></p>
+                                    <p style="margin: 5px 0;"><strong>Email:</strong> <span id="contactAdminEmail">Loading...</span></p>
+                                </div>
+                            </div>
+                        </div>
+                        <form id="chatForm" class="member-message-form" onsubmit="openWhatsAppChatWithAdmin(event)">
+                            <div class="member-message-field">
+                                <label for="chatFullName">Full Name</label>
+                                <input id="chatFullName" type="text" placeholder="Your full name" autocomplete="name">
+                            </div>
+                            <div class="member-message-field">
+                                <label for="chatEmail">Email Address</label>
+                                <input id="chatEmail" type="email" placeholder="your@email.com" autocomplete="email">
+                            </div>
+                            <div class="member-message-field">
+                                <label for="chatSubject">Subject</label>
+                                <input id="chatSubject" type="text" placeholder="What's this about?" required>
+                            </div>
+                            <div class="member-message-field">
+                                <label for="chatMessageInput">Message</label>
+                                <textarea id="chatMessageInput" rows="5" placeholder="Write your message here..." required></textarea>
+                            </div>
+                            <button type="submit" class="member-message-submit">Send Message</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <section id="settingsSection" class="content-section" style="display: none;">
+                <div class="panel-card max-width-md" style="border-top: 4px solid var(--primary);">
+                    <h3><i class="fas fa-id-card text-primary"></i> My Profile</h3>
+                    <hr>
+                    <div id="profileSummaryCard" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem;">
+                        <div><strong>Name:</strong> <span id="settingsProfileName">-</span></div>
+                        <div><strong>Phone:</strong> <span id="settingsProfilePhone">-</span></div>
+                        <div><strong>Email:</strong> <span id="settingsProfileEmail">-</span></div>
+                        <div><strong>Status:</strong> <span id="settingsProfileStatus" style="font-weight: bold;">-</span></div>
+                        <div><strong>Member ID:</strong> <span id="settingsProfileId">-</span></div>
+                        <div><strong>Joined:</strong> <span id="settingsProfileDate">-</span></div>
+                    </div>
+                </div>
+
+                <div class="panel-card max-width-md" style="margin-top: 20px;">
+                    <h3><i class="fas fa-sliders-h text-muted"></i> Workspace Parameters</h3>
+                    <hr>
+                    <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0 0 5px; font-size: 0.95rem;">Enforce Back-End Roundtrip</h4>
+                            <p style="margin: 0; font-size: 0.8rem; color: #888;">Require API refresh on every data load.</p>
+                        </div>
+                        <label class="toggle-switch" style="margin-left: 15px;">
+                            <input type="checkbox" id="settingsForceRefresh">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0 0 5px; font-size: 0.95rem;">Disable Glassmorphism Blur</h4>
+                            <p style="margin: 0; font-size: 0.8rem; color: #888;">Improve performance on older devices.</p>
+                        </div>
+                        <label class="toggle-switch" style="margin-left: 15px;">
+                            <input type="checkbox" id="settingsDisableBlur" onchange="toggleBlurEffect(this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <button class="btn btn-danger" onclick="executeSystemReset()"><i class="fas fa-trash-alt"></i> Flush
+                        Local Cache State</button>
+                </div>
+
+                <div class="panel-card max-width-md" style="margin-top: 20px; border-top: 4px solid #4caf50;">
+                    <h3><i class="fas fa-user-edit text-success"></i> Update Profile</h3>
+                    <p class="subtitle text-muted">Update your name, phone number, or email.</p>
+                    <hr>
+                    <form id="updateProfileForm" onsubmit="updateMemberProfile(event)">
+                        <div class="form-group">
+                            <label for="profileName">Full Name</label>
+                            <input type="text" id="profileName" autocomplete="name" placeholder="Your full name">
+                        </div>
+                        <div class="form-group">
+                            <label for="profilePhone">Phone Number</label>
+                            <input type="tel" id="profilePhone" autocomplete="tel" placeholder="e.g. 0712345678">
+                        </div>
+                        <div class="form-group">
+                            <label for="profileEmail">Email Address</label>
+                            <input type="email" id="profileEmail" autocomplete="email" placeholder="you@example.com">
+                        </div>
+                        <div id="profileUpdateStatus" style="margin-top: 10px; font-size: 13px;"></div>
+                        <button type="submit" class="btn btn-primary" style="margin-top: 10px;"><i class="fas fa-save"></i> Update Profile</button>
+                    </form>
+                </div>
+
+                <div class="panel-card max-width-md" style="margin-top: 20px; border-top: 4px solid var(--primary);">
+                    <h3><i class="fas fa-key text-primary"></i> Update Password & PIN</h3>
+                    <p class="subtitle text-muted">Change your login password or transaction security PIN.</p>
+                    <hr>
+                    <form id="updateCredentialsForm" onsubmit="updateMemberCredentials(event)">
+                        <div class="form-group">
+                            <label for="currentPassword">Current Password</label>
+                            <div style="position: relative;">
+                                <input type="password" id="currentPassword" autocomplete="current-password" required placeholder="Enter current password" style="width: 100%; box-sizing: border-box; padding-right: 40px;">
+                                <i class="fas fa-eye" style="position:absolute; right:12px; top:12px; color:#aaa; cursor:pointer;" onclick="togglePasswordVisibility('currentPassword', this)"></i>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword">New Password (leave blank to keep current)</label>
+                            <div style="position: relative;">
+                                <input type="password" id="newPassword" autocomplete="new-password" placeholder="Enter new password (min 6 characters)" style="width: 100%; box-sizing: border-box; padding-right: 40px;">
+                                <i class="fas fa-eye" style="position:absolute; right:12px; top:12px; color:#aaa; cursor:pointer;" onclick="togglePasswordVisibility('newPassword', this)"></i>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPin">New Transaction PIN (leave blank to keep current)</label>
+                            <div style="position: relative;">
+                                <input type="password" id="newPin" autocomplete="new-password" maxlength="4" pattern="[0-9]{4}" placeholder="e.g. 1234" style="width: 100%; box-sizing: border-box; padding-right: 40px;">
+                                <i class="fas fa-eye" style="position:absolute; right:12px; top:12px; color:#aaa; cursor:pointer;" onclick="togglePasswordVisibility('newPin', this)"></i>
+                            </div>
+                            <small style="color:#aaa;">4-digit numeric PIN for loan requests and payments.</small>
+                        </div>
+                        <div id="credUpdateStatus" style="margin-top: 10px; font-size: 13px;"></div>
+                        <button type="submit" class="btn btn-primary" style="margin-top: 10px;"><i class="fas fa-save"></i> Update Credentials</button>
+                    </form>
+                </div>
+
+                <div class="panel-card max-width-md" style="margin-top: 20px; border-top: 4px solid #00bcd4;">
+                    <h3><i class="fas fa-shield-alt text-info"></i> Security Preferences</h3>
+                    <p class="subtitle text-muted">Save local member login and field protection preferences for your portal experience.</p>
+                    <hr>
+                    <div style="display:grid; gap:14px; text-align:left;">
+                        <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px;">
+                            <div style="font-size:13px; color:#fff;">Allow login with email or username</div>
+                            <input type="checkbox" id="memberSettingLoginEmailOrUsername" style="justify-self:center;">
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px;">
+                            <div style="font-size:13px; color:#fff;">Disable browser autocomplete on login forms</div>
+                            <input type="checkbox" id="memberSettingDisableLoginAutocomplete" style="justify-self:center;">
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px;">
+                            <div style="font-size:13px; color:#fff;">Enforce stronger password/PIN requirements</div>
+                            <input type="checkbox" id="memberSettingEnforceStrongPasswords" style="justify-self:center;">
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px;">
+                            <div style="font-size:13px; color:#fff;">Enable auto-logout after inactivity</div>
+                            <input type="checkbox" id="memberSettingAutoLogout" style="justify-self:center;">
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px;">
+                            <div style="font-size:13px; color:#fff;">Hide sensitive inputs by default</div>
+                            <input type="checkbox" id="memberSettingHideSensitiveFields" style="justify-self:center;">
+                        </div>
+                        <button type="button" class="btn btn-primary" style="margin-top: 10px; width: fit-content; justify-self:center;" onclick="saveMemberSecurityPreferences()">Save Security Preferences</button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div><!-- /.app-container -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script>
+        (function(){
+            emailjs.init({ publicKey: "TlH6osvAnSZ29aZ0W" });
+        })();
+    </script>
+    <!-- Background Decoration -->
+    <div class="bg-shape shape1"></div>
+    <div class="bg-shape shape2"></div>
+
+    <!-- Security PIN Modal -->
+    <div id="securityPinModal" class="auth-wrapper" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+        <div class="auth-card" style="max-width: 350px; text-align: center;">
+            <i class="fas fa-shield-alt" style="font-size: 3rem; color: #f44336; margin-bottom: 20px;"></i>
+            <h3>Transaction Security</h3>
+            <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Please enter your 4-digit Security PIN to verify this financial request.</p>
+            <input type="password" id="transactionPinInput" autocomplete="new-password" maxlength="4" pattern="[0-9]{4}" placeholder="****" style="text-align: center; font-size: 24px; letter-spacing: 8px; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn btn-secondary btn-block" onclick="cancelTransactionPin()">Cancel</button>
+                <button type="button" class="btn btn-primary btn-block" onclick="confirmTransactionPin()">Verify</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Entry Modal -->
+    <div id="paymentModal" class="auth-wrapper" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+        <div class="auth-card" style="max-width: 450px;">
+            <h3 style="margin-top: 0;">Manual Dues & Contribution Entry</h3>
+            <form id="paymentForm" onsubmit="submitPayment(event)" enctype="multipart/form-data">
+                <div class="form-group" style="position: relative;">
+                    <label>Member Name *</label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="text" id="paymentMemberSearch" placeholder="Type name or click dropdown..." oninput="filterMemberSearch(this.value)" autocomplete="off" style="flex: 1;">
+                        <button type="button" class="btn btn-secondary" onclick="toggleAllMembersDropdown()" title="Show all members" style="padding: 6px 10px; min-width: 36px;"><i class="fas fa-chevron-down"></i></button>
+                    </div>
+                    <input type="hidden" id="paymentMemberId">
+                    <div id="memberSearchDropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-dark-panel); border: 1px solid var(--bg-dark-accent); max-height: 200px; overflow-y: auto; z-index: 1000;"></div>
+                </div>
+                <div class="form-group">
+                    <label>Amount (Ksh) *</label>
+                    <input type="number" id="paymentAmount" step="0.01" min="0.01" required placeholder="Enter contribution amount">
+                </div>
+                <div class="form-group">
+                    <label>Payment Method (Optional)</label>
+                    <select id="paymentMethod" onchange="toggleCustomPaymentMethod(this.value)">
+                        <option value="">-- Not specified --</option>
+                        <option value="Cash">Cash</option>
+                        <option value="M-Pesa">M-Pesa</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                        <option value="Cheque">Cheque</option>
+                        <option value="Digital Wallet">Digital Wallet</option>
+                        <option value="__other__">Other (specify below)</option>
+                    </select>
+                    <input type="text" id="paymentMethodCustom" placeholder="Enter custom payment method" style="display:none; margin-top:6px;" maxlength="100">
+                </div>
+                <div class="form-group" style="display: none;">
+                    <label>Receipt File (Optional)</label>
+                    <input type="file" id="paymentReceipt" accept=".pdf, .jpeg, .jpg, .png">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('paymentModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-block">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Expense Claim Modal -->
+    <div id="expenseModal" class="auth-wrapper" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+        <div class="auth-card" style="max-width: 450px;">
+            <h3 style="margin-top: 0;">New Expense Voucher Submission</h3>
+            <form id="expenseForm" onsubmit="submitExpense(event)" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>Category/Line Item *</label>
+                    <select id="expenseCategory" required onchange="toggleCustomExpenseCategory(this.value)">
+                        <option value="">-- Select Category --</option>
+                        <option value="Office Supplies">Office Supplies</option>
+                        <option value="Event Logistics">Event Logistics</option>
+                        <option value="Travel">Travel</option>
+                        <option value="Refreshments">Refreshments</option>
+                        <option value="Transport & Fuel">Transport & Fuel</option>
+                        <option value="Communication">Communication</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Other">Other (specify below)</option>
+                    </select>
+                    <input type="text" id="expenseCategoryCustom" placeholder="Enter custom category" style="display:none; margin-top:6px;" maxlength="150">
+                </div>
+                <div class="form-group">
+                    <label>Amount (Numeric)</label>
+                    <input type="number" id="expenseAmount" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group" style="display: none;">
+                    <label>Receipt File (Optional, Max 10MB)</label>
+                    <input type="file" id="expenseReceipt" accept="*/*" onchange="validateExpenseReceipt(this)">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('expenseModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-block">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Savings Goal Modal -->
+    <div id="savingsGoalModal" class="auth-wrapper" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+        <div class="auth-card" style="max-width: 420px;">
+            <h3 style="margin-top: 0;"><i class="fas fa-bullseye" style="color: var(--teal);"></i> Set Savings Goal</h3>
+            <p class="subtitle text-muted">Define a personal savings target to track your progress.</p>
+            <form id="savingsGoalForm" onsubmit="submitSavingsGoal(event)">
+                <div class="form-group">
+                    <label>Goal Label (optional)</label>
+                    <input type="text" id="savingsGoalName" placeholder="e.g. Emergency Fund, School Fees" maxlength="150">
+                </div>
+                <div class="form-group">
+                    <label>Target Amount (KES) *</label>
+                    <input type="number" id="savingsGoalAmount" min="1" step="0.01" required placeholder="e.g. 50000">
+                </div>
+                <div class="form-group">
+                    <label>Target Date (optional)</label>
+                    <input type="date" id="savingsGoalDate">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('savingsGoalModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-success btn-block">Save Goal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JS Inclusions -->
+    <script src="js/member.js?v=2.2"></script>

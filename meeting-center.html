@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="utils/security.js"></script>
+  <meta charset="UTF-8">
+  <title>Meeting Center - TLMS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TLMS Meeting Center - schedule meetings, manage attendance, and generate minutes.">
+  <link rel="stylesheet" href="style/home.css">
+  <link rel="stylesheet" href="style/designTokens.css">
+  <style>
+    .meeting-dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .meeting-card {
+      background: rgba(0, 0, 0, 0.18);
+      border: 1px solid rgba(0, 224, 255, 0.15);
+      border-radius: 12px;
+      padding: 18px 16px;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .meeting-card h3 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+      color: #00e0ff;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .meeting-card strong {
+      font-size: 1.8rem;
+      color: #fff;
+    }
+    .meeting-banner {
+      margin: 18px 0 24px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+    .meeting-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .meeting-actions .main-btn {
+      background: linear-gradient(90deg,#00e0ff,#0077ff);
+      border:none;
+      color:#000;
+      padding:10px 16px;
+      border-radius:10px;
+      font-weight:700;
+      cursor:pointer;
+      min-width:212px;
+    }
+    .meeting-actions .dropdown-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    .meeting-actions .dropdown-button {
+      background: rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.08);
+      color:#fff;
+      padding:10px 16px;
+      border-radius:10px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .meeting-actions .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      min-width: 220px;
+      background: rgba(10,18,40,0.98);
+      border: 1px solid rgba(0,224,255,0.12);
+      border-radius: 10px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+      padding: 10px;
+      display: none;
+      z-index: 1000;
+    }
+    .meeting-actions .dropdown-menu.active {
+      display: block;
+    }
+    .meeting-actions .dropdown-menu button {
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: transparent;
+      color: #e8eaf6;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .meeting-actions .dropdown-menu button:hover {
+      background: rgba(0, 224, 255, 0.1);
+    }
+    .meeting-section {
+      background: rgba(0, 0, 0, 0.18);
+      border: 1px solid rgba(0, 224, 255, 0.15);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    .meeting-section h2 {
+      margin-top: 0;
+      color: #fff;
+      font-size: 1.2rem;
+    }
+    .meeting-section .section-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .meeting-section .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .meeting-section label {
+      font-size: 12px;
+      opacity: 0.75;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .meeting-section input,
+    .meeting-section select,
+    .meeting-section textarea {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.05);
+      color: #e8eaf6;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .meeting-section textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .meeting-section .full-width {
+      grid-column: 1 / -1;
+    }
+    .meeting-table-wrapper {
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+    .meeting-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 960px;
+    }
+    .meeting-table th,
+    .meeting-table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      color: #dfe7ff;
+      font-size: 13px;
+      text-align: left;
+    }
+    .meeting-table th {
+      color: #a3dafe;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(255,255,255,0.02);
+      position: sticky;
+      top: 0;
+    }
+    .meeting-table tr:hover {
+      background: rgba(0, 224, 255, 0.07);
+    }
+    .meeting-table .action-buttons button {
+      margin-right: 8px;
+      margin-bottom: 4px;
+    }
+    .meeting-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .meeting-tag {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      color: #cfd8fc;
+    }
+    .meeting-panel {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 20px;
+    }
+    .meeting-panel-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .meeting-panel-card {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(0,224,255,0.12);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .meeting-panel-card h3 {
+      margin-top: 0;
+      font-size: 1rem;
+      color: #e0f7ff;
+    }
+    @media (max-width: 980px) {
+      .meeting-section .section-row,
+      .meeting-panel {
+        grid-template-columns: 1fr;
+      }
+      .meeting-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .meeting-actions .main-btn,
+      .meeting-actions .dropdown-button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body data-page="meeting-center">
+  <div class="top-header">
+    <div class="header-title-wrap">
+      <button type="button" class="sidebar-toggle" onclick="toggleSidebarNav()" aria-label="Toggle navigation" aria-expanded="false">Menu</button>
+      <h1 class="header-desktop-title">TLMS Meeting Center</h1>
+      <h1 class="header-mobile-title">Meeting Center</h1>
+    </div>
+    <div class="top-header-actions">
+      <button class="action-btn" style="background:linear-gradient(90deg,#00e0ff,#0077ff); color:#000; font-weight:700;" onclick="window.location.href='home.html'">Back to Dashboard</button>
+    </div>
+  </div>
+
+  <main style="padding: 24px;">
+    <section class="meeting-banner">
+      <div>
+        <h2 style="margin:0 0 8px; color:#fff;">Complete Meeting Management</h2>
+        <p style="margin:0; opacity:0.7; max-width:720px;">Schedule, manage attendance, build agendas, generate minutes, and keep meeting records in a single TLMS workflow.</p>
+      </div>
+      <div>
+        <div class="meeting-actions">
+          <button class="main-btn" onclick="openScheduleDialog()">➕ Schedule New Meeting</button>
+          <button class="main-btn" style="background:#4caf50; color:#fff;" onclick="openGenerateMinutesDialog()">📄 Generate Minutes</button>
+          <button class="main-btn" style="background:#ffb300; color:#000;" onclick="sendMeetingLinkToMembers()">📤 Send Meeting Link to Members</button>
+          <div class="dropdown-wrap">
+            <button class="dropdown-button" id="meetingActionsToggle" onclick="toggleActionsDropdown()">Actions ▼</button>
+            <div class="dropdown-menu" id="meetingActionsMenu">
+              <button onclick="openScheduleDialog()">Edit Meeting</button>
+              <button onclick="openScheduleDialog()">Update Meeting</button>
+              <button onclick="previewSelectedMeeting()">Preview Meeting</button>
+              <button onclick="saveMinutesRecord()">Save Minutes</button>
+              <button onclick="downloadMinutesReport()">Download</button>
+              <button onclick="exportMeetingsAsPDF()">Export PDF</button>
+              <button onclick="exportMeetingsAsDocx()">Export DOCX</button>
+              <button onclick="window.print()">Print</button>
+              <button onclick="shareMeetingLinkToMembers()">Share</button>
+              <button onclick="shareMeetingLinkByEmail()">Share by Email</button>
+              <button onclick="copyMeetingLink()">Copy Meeting Link</button>
+              <button onclick="sendMeetingNotification()">Send Notification</button>
+              <button onclick="archiveSelectedMeetings()">Archive</button>
+              <button onclick="restoreSelectedMeetings()">Restore</button>
+              <button onclick="deleteSelectedMeetings()">Delete</button>
+              <button onclick="refreshMeetingCenter()">Refresh</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="meeting-dashboard-grid" id="meetingSummaryCards">
+      <div class="meeting-card"><h3>Total Meetings</h3><strong id="summaryTotalMeetings">0</strong><div class="meeting-tag">All meetings</div></div>
+      <div class="meeting-card"><h3>Upcoming Meetings</h3><strong id="summaryUpcomingMeetings">0</strong><div class="meeting-tag">Future schedule</div></div>
+      <div class="meeting-card"><h3>Meetings This Month</h3><strong id="summaryMonthMeetings">0</strong><div class="meeting-tag">Current month</div></div>
+      <div class="meeting-card"><h3>Pending Approval</h3><strong id="summaryPendingMeetings">0</strong><div class="meeting-tag">Requires review</div></div>
+      <div class="meeting-card"><h3>Draft Minutes</h3><strong id="summaryDraftMinutes">0</strong><div class="meeting-tag">In progress</div></div>
+      <div class="meeting-card"><h3>Approved Minutes</h3><strong id="summaryApprovedMinutes">0</strong><div class="meeting-tag">Finalized</div></div>
+      <div class="meeting-card"><h3>Attendance Rate</h3><strong id="summaryAttendanceRate">0%</strong><div class="meeting-tag">Average</div></div>
+      <div class="meeting-card"><h3>Action Items</h3><strong id="summaryOutstandingActions">0</strong><div class="meeting-tag">Pending tasks</div></div>
+    </section>
+
+    <section class="meeting-section">
+      <h2>Meeting Scheduler</h2>
+      <div class="section-row">
+        <div class="field-group">
+          <label>Meeting Title</label>
+          <input type="text" id="meetingTitle" placeholder="Board strategy meeting" />
+        </div>
+        <div class="field-group">
+          <label>Meeting Type</label>
+          <select id="meetingType">
+            <option value="Board">Board Meeting</option>
+            <option value="Executive">Executive Committee</option>
+            <option value="Loan">Loan Committee</option>
+            <option value="Finance">Finance Committee</option>
+            <option value="Savings">Savings Committee</option>
+            <option value="Staff">Staff Meeting</option>
+            <option value="Department">Department Meeting</option>
+            <option value="Emergency">Emergency Meeting</option>
+            <option value="AGM">Annual General Meeting (AGM)</option>
+            <option value="SGM">Special General Meeting (SGM)</option>
+            <option value="Credit">Credit Committee Meeting</option>
+            <option value="Custom">Custom</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Committee</label>
+          <input type="text" id="meetingCommittee" placeholder="Executive Committee" />
+        </div>
+        <div class="field-group">
+          <label>Department</label>
+          <input type="text" id="meetingDepartment" placeholder="Treasurer / Finance" />
+        </div>
+        <div class="field-group full-width">
+          <label>Purpose</label>
+          <input type="text" id="meetingPurpose" placeholder="Review loan portfolio and approvals" />
+        </div>
+        <div class="field-group full-width">
+          <label>Description</label>
+          <textarea id="meetingDescription" placeholder="Provide a short summary of the meeting objectives"></textarea>
+        </div>
+        <div class="field-group">
+          <label>Status</label>
+          <select id="meetingStatus">
+            <option value="Scheduled">Scheduled</option>
+            <option value="Pending Approval">Pending Approval</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Priority Level</label>
+          <select id="meetingPriority">
+            <option value="Normal">Normal</option>
+            <option value="High">High</option>
+            <option value="Critical">Critical</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Confidentiality</label>
+          <select id="meetingConfidentiality">
+            <option value="Normal">Normal</option>
+            <option value="Confidential">Confidential</option>
+            <option value="Secret">Secret</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Organizer</label>
+          <input type="text" id="meetingOrganizer" placeholder="Head Treasurer" />
+        </div>
+        <div class="field-group">
+          <label>Chairperson</label>
+          <input type="text" id="meetingChairperson" placeholder="Chairperson" />
+        </div>
+        <div class="field-group">
+          <label>Vice Chairperson</label>
+          <input type="text" id="meetingViceChair" placeholder="Vice Chairperson" />
+        </div>
+        <div class="field-group">
+          <label>Secretary</label>
+          <input type="text" id="meetingSecretary" placeholder="Secretary" />
+        </div>
+        <div class="field-group">
+          <label>Assistant Secretary</label>
+          <input type="text" id="meetingAssistantSecretary" placeholder="Assistant Secretary" />
+        </div>
+        <div class="field-group">
+          <label>Minute Taker</label>
+          <input type="text" id="meetingMinuteTaker" placeholder="Minute Taker" />
+        </div>
+        <div class="field-group">
+          <label>Date</label>
+          <input type="date" id="meetingDate" />
+        </div>
+        <div class="field-group">
+          <label>Start Time</label>
+          <input type="time" id="meetingStartTime" />
+        </div>
+        <div class="field-group">
+          <label>End Time</label>
+          <input type="time" id="meetingEndTime" />
+        </div>
+        <div class="field-group">
+          <label>Venue</label>
+          <input type="text" id="meetingVenue" placeholder="Chama Boardroom" />
+        </div>
+        <div class="field-group">
+          <label>Online Meeting Link</label>
+          <input type="url" id="meetingLink" placeholder="https://meet.example.com/meeting" />
+        </div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+          <button class="action-btn" style="background:#4caf50; color:#fff;" onclick="saveMeetingRecord()">Save Meeting</button>
+          <button class="action-btn" style="background:#10b981; color:#fff;" onclick="sendMeetingLinkToMembers()">Send Meeting Link</button>
+        </div>
+        <div class="field-group full-width">
+          <label>Supporting Documents</label>
+          <input type="file" id="meetingAttachments" multiple />
+        </div>
+      </div>
+    </section>
+
+    <section class="meeting-section">
+      <h2>Attendance Management</h2>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 20px;">
+        <div class="meeting-panel-card">
+          <h3>Members Present</h3>
+          <select id="meetingPresent" multiple style="min-height: 160px;"></select>
+        </div>
+        <div class="meeting-panel-card">
+          <h3>Members Absent</h3>
+          <select id="meetingAbsent" multiple style="min-height: 160px;"></select>
+        </div>
+        <div class="meeting-panel-card">
+          <h3>Absent with Apology</h3>
+          <select id="meetingApology" multiple style="min-height: 160px;"></select>
+        </div>
+        <div class="meeting-panel-card">
+          <h3>External Participants</h3>
+          <select id="meetingGuests" multiple style="min-height: 160px;"></select>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+        <div class="field-group">
+          <label>Attendance Notes</label>
+          <textarea id="attendanceNotes" placeholder="Add arrival, departure, and confirmation notes"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="meeting-section">
+      <h2>Agenda Builder</h2>
+      <div class="meeting-panel-card" style="padding: 14px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
+          <button class="action-btn" style="background:#00e0ff; color:#000;" onclick="addAgendaItem()">+ Add Agenda Item</button>
+          <button class="action-btn" style="background:#555;" onclick="resetAgendaItems()">Reset Agenda</button>
+        </div>
+        <div id="agendaItemsContainer" style="display:flex; flex-direction:column; gap:12px;"></div>
+      </div>
+    </section>
+
+    <section class="meeting-section">
+      <h2>Meeting Minutes Structure</h2>
+      <div class="section-row">
+        <div class="field-group full-width">
+          <label>Template</label>
+          <select id="minutesTemplate" onchange="applyMinutesTemplate()">
+            <option value="Board">Board Meeting</option>
+            <option value="Executive">Executive Committee Meeting</option>
+            <option value="Loan">Loan Committee Meeting</option>
+            <option value="Finance">Finance Committee Meeting</option>
+            <option value="Savings">Savings Committee Meeting</option>
+            <option value="Staff">Staff Meeting</option>
+            <option value="Department">Department Meeting</option>
+            <option value="Emergency">Emergency Meeting</option>
+            <option value="AGM">Annual General Meeting (AGM)</option>
+            <option value="SGM">Special General Meeting (SGM)</option>
+            <option value="Credit">Credit Committee Meeting</option>
+            <option value="Custom">Custom Template</option>
+          </select>
+        </div>
+        <div class="field-group full-width">
+          <label>Minutes Notes</label>
+          <textarea id="minutesBody" placeholder="Meeting discussion, resolutions, action items, decisions."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="meeting-section">
+      <h2>Meeting Records</h2>
+      <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom: 16px; align-items:center;">
+        <input id="meetingSearch" type="search" placeholder="Search meetings..." style="flex:1; min-width:220px;" oninput="filterMeetingRecords()" />
+        <select id="meetingStatusFilter" onchange="filterMeetingRecords()" style="min-width:180px;">
+          <option value="all">All Statuses</option>
+          <option value="Scheduled">Scheduled</option>
+          <option value="Pending Approval">Pending Approval</option>
+          <option value="Confirmed">Confirmed</option>
+          <option value="Completed">Completed</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+        <button class="action-btn" style="background:#4caf50;" onclick="loadMeetingRecords()">Refresh</button>
+      </div>
+      <div class="meeting-table-wrapper">
+        <table class="meeting-table" id="meetingRecordsTable">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="selectAllMeetings" onchange="toggleAllMeetingSelection(this.checked)"></th>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Committee</th>
+              <th>Organizer</th>
+              <th>Chairperson</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Venue</th>
+              <th>Attendance</th>
+              <th>Minutes</th>
+              <th>Status</th>
+              <th>Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="meetingRecordsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/home.js"></script>
+  <script>
+    const meetingCenterState = {
+      allMeetings: [],
+      selectedMeetingIds: new Set(),
+      agendaItems: [],
+      members: [],
+      editingMeetingId: null,
+      meetingTemplates: {
+        Board: 'Meeting Header\n\nMeeting Information\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information\n\nSignatures (Chairperson & Secretary)',
+        Executive: 'Meeting Header\n\nExecutive Summary\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nFinancial Discussions\n\nLoan Discussions\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        Loan: 'Meeting Header\n\nLoan Committee Overview\n\nAttendance Register\n\nAgenda Items\n\nLoan Discussions\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        Finance: 'Meeting Header\n\nFinance Review\n\nAttendance Register\n\nAgenda Items\n\nFinancial Discussions\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        Savings: 'Meeting Header\n\nSavings Committee Notes\n\nAttendance Register\n\nAgenda Items\n\nSavings Discussions\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        Staff: 'Meeting Header\n\nStaff Briefing\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        Department: 'Meeting Header\n\nDepartment Updates\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        Emergency: 'Meeting Header\n\nEmergency Response\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        AGM: 'Meeting Header\n\nAnnual General Meeting\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nResolutions Passed\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        SGM: 'Meeting Header\n\nSpecial General Meeting\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nResolutions Passed\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        Credit: 'Meeting Header\n\nCredit Committee Review\n\nAttendance Register\n\nAgenda Items\n\nLoan Discussions\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        Custom: 'Meeting Header\n\nMeeting Information\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information'
+      }
+    };
+
+    function toggleActionsDropdown() {
+      const menu = document.getElementById('meetingActionsMenu');
+      if (!menu) return;
+      menu.classList.toggle('active');
+    }
+
+    document.addEventListener('click', function (e) {
+      const menu = document.getElementById('meetingActionsMenu');
+      const toggle = document.getElementById('meetingActionsToggle');
+      if (!menu || !toggle) return;
+      if (!toggle.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.remove('active');
+      }
+    });
+
+    async function initializeMeetingCenter() {
+      await loadMeetingMembers();
+      await loadMeetingRecords();
+      renderAgendaItems();
+      applyMinutesTemplate();
+    }
+
+    async function loadMeetingMembers() {
+      try {
+        const rows = await apiCall('members/all?status=approved', { method: 'GET' });
+        meetingCenterState.members = Array.isArray(rows) ? rows : [];
+        const selects = ['meetingPresent', 'meetingAbsent', 'meetingApology', 'meetingGuests'];
+        selects.forEach(id => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.innerHTML = meetingCenterState.members.map(m => `<option value="${m.id}">${m.full_name} (${m.phone || m.email || 'N/A'})</option>`).join('');
+        });
+      } catch (e) {
+        console.warn('[loadMeetingMembers]', e.message || e);
+      }
+    }
+
+    async function loadMeetingRecords() {
+      try {
+        const rows = await apiCall('automation/meetings', { method: 'GET' });
+        meetingCenterState.allMeetings = Array.isArray(rows) ? rows : [];
+        updateMeetingSummaries();
+        renderMeetingRecords();
+      } catch (e) {
+        console.warn('[loadMeetingRecords]', e.message || e);
+        meetingCenterState.allMeetings = [];
+        renderMeetingRecords();
+      }
+    }
+
+    function updateMeetingSummaries() {
+      const now = new Date();
+      const month = now.getMonth();
+      const year = now.getFullYear();
+      const total = meetingCenterState.allMeetings.length;
+      const upcoming = meetingCenterState.allMeetings.filter(m => new Date(`${m.meeting_date}T${m.meeting_time}`) >= now).length;
+      const monthCount = meetingCenterState.allMeetings.filter(m => {
+        const d = new Date(m.meeting_date);
+        return d.getMonth() === month && d.getFullYear() === year;
+      }).length;
+      const pending = meetingCenterState.allMeetings.filter(m => (m.status || 'Scheduled') === 'Pending Approval').length;
+      const draft = meetingCenterState.allMeetings.filter(m => (m.status || '').toLowerCase().includes('draft')).length;
+      const approved = meetingCenterState.allMeetings.filter(m => ['confirmed', 'completed'].includes((m.status || '').toLowerCase())).length;
+      const attendance = total ? Math.round((approved / total) * 100) : 0;
+      const actions = meetingCenterState.allMeetings.reduce((sum, m) => sum + (Number(m.action_items_pending || 0)), 0);
+      document.getElementById('summaryTotalMeetings').textContent = total;
+      document.getElementById('summaryUpcomingMeetings').textContent = upcoming;
+      document.getElementById('summaryMonthMeetings').textContent = monthCount;
+      document.getElementById('summaryPendingMeetings').textContent = pending;
+      document.getElementById('summaryDraftMinutes').textContent = draft;
+      document.getElementById('summaryApprovedMinutes').textContent = approved;
+      document.getElementById('summaryAttendanceRate').textContent = attendance + '%';
+      document.getElementById('summaryOutstandingActions').textContent = actions;
+    }
+
+    function renderMeetingRecords() {
+      const tbody = document.getElementById('meetingRecordsBody');
+      const search = (document.getElementById('meetingSearch')?.value || '').toLowerCase();
+      const statusFilter = (document.getElementById('meetingStatusFilter')?.value || 'all');
+      const rows = meetingCenterState.allMeetings.filter(m => {
+        const text = `${m.title || ''} ${m.location || ''} ${m.platform || ''} ${m.target_group || ''}`.toLowerCase();
+        if (search && !text.includes(search)) return false;
+        if (statusFilter !== 'all' && (m.status || 'Scheduled') !== statusFilter) return false;
+        return true;
+      });
+      if (!tbody) return;
+      tbody.innerHTML = rows.map(m => `
+        <tr>
+          <td style="text-align:center;"><input type="checkbox" data-id="${m.id}" onchange="toggleMeetingSelection(${m.id}, this.checked)"></td>
+          <td>#${m.id}</td>
+          <td>${m.title || 'Untitled'}</td>
+          <td>${m.target_group || '-'}</td>
+          <td>${m.organizer || '-'}</td>
+          <td>${m.chair || '-'}</td>
+          <td>${m.meeting_date || '-'}</td>
+          <td>${m.meeting_time || '-'}</td>
+          <td>${m.location || '-'}</td>
+          <td>${m.attendance_count || 0}</td>
+          <td>${m.minutes_status || 'N/A'}</td>
+          <td>${m.status || 'Scheduled'}</td>
+          <td>${m.updated_at ? new Date(m.updated_at).toLocaleString() : '-'}</td>
+          <td class="action-buttons">
+            <button class="action-btn" onclick="previewMeeting(${m.id})">Preview</button>
+            <button class="action-btn" onclick="openEditMeeting(${m.id})">Edit</button>
+            <button class="btn-del" onclick="deleteMeeting(${m.id})">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+      if (!rows.length) tbody.innerHTML = '<tr><td colspan="14" style="text-align:center; opacity:0.6; padding:18px;">No meeting records found.</td></tr>';
+    }
+
+    function filterMeetingRecords() {
+      renderMeetingRecords();
+    }
+
+    function toggleMeetingSelection(id, checked) {
+      if (checked) meetingCenterState.selectedMeetingIds.add(id);
+      else meetingCenterState.selectedMeetingIds.delete(id);
+    }
+
+    function toggleAllMeetingSelection(checked) {
+      document.querySelectorAll('#meetingRecordsBody input[type="checkbox"]').forEach(cb => {
+        cb.checked = checked;
+        const id = Number(cb.dataset.id || 0);
+        if (id) {
+          if (checked) meetingCenterState.selectedMeetingIds.add(id);
+          else meetingCenterState.selectedMeetingIds.delete(id);
+        }
+      });
+    }
+
+    function addAgendaItem() {
+      meetingCenterState.agendaItems.push({ id: Date.now(), title: '', description: '', presenter: '', duration: '', notes: '', status: 'Pending' });
+      renderAgendaItems();
+    }
+
+    function resetAgendaItems() {
+      meetingCenterState.agendaItems = [];
+      renderAgendaItems();
+    }
+
+    function renderAgendaItems() {
+      const container = document.getElementById('agendaItemsContainer');
+      if (!container) return;
+      container.innerHTML = meetingCenterState.agendaItems.map((item, index) => `
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;display:grid;gap:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+            <strong>Agenda ${index + 1}</strong>
+            <div>
+              <button class="action-btn" style="background:#00e0ff;color:#000;" onclick="moveAgendaItem(${item.id}, -1)">↑</button>
+              <button class="action-btn" style="background:#00e0ff;color:#000;" onclick="moveAgendaItem(${item.id}, 1)">↓</button>
+              <button class="btn-del" onclick="removeAgendaItem(${item.id})">Delete</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div><label>Title</label><input type="text" value="${item.title}" onchange="updateAgendaField(${item.id}, 'title', this.value)"></div>
+            <div><label>Presenter</label><input type="text" value="${item.presenter}" onchange="updateAgendaField(${item.id}, 'presenter', this.value)"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div><label>Estimated Duration</label><input type="text" value="${item.duration}" onchange="updateAgendaField(${item.id}, 'duration', this.value)"></div>
+            <div><label>Status</label><select onchange="updateAgendaField(${item.id}, 'status', this.value)"><option ${item.status==='Pending'?'selected':''}>Pending</option><option ${item.status==='Completed'?'selected':''}>Completed</option><option ${item.status==='In Progress'?'selected':''}>In Progress</option></select></div>
+          </div>
+          <div><label>Description</label><textarea onchange="updateAgendaField(${item.id}, 'description', this.value)">${item.description}</textarea></div>
+          <div><label>Notes</label><textarea onchange="updateAgendaField(${item.id}, 'notes', this.value)">${item.notes}</textarea></div>
+        </div>
+      `).join('');
+      if (!meetingCenterState.agendaItems.length) container.innerHTML = '<div style="opacity:0.7; padding:16px;">No agenda items yet. Click "Add Agenda Item" to begin.</div>';
+    }
+
+    function updateAgendaField(id, field, value) {
+      const item = meetingCenterState.agendaItems.find(i => i.id === id);
+      if (!item) return;
+      item[field] = value;
+    }
+
+    function removeAgendaItem(id) {
+      meetingCenterState.agendaItems = meetingCenterState.agendaItems.filter(i => i.id !== id);
+      renderAgendaItems();
+    }
+
+    function moveAgendaItem(id, direction) {
+      const index = meetingCenterState.agendaItems.findIndex(i => i.id === id);
+      if (index < 0) return;
+      const swapIndex = index + direction;
+      if (swapIndex < 0 || swapIndex >= meetingCenterState.agendaItems.length) return;
+      [meetingCenterState.agendaItems[index], meetingCenterState.agendaItems[swapIndex]] = [meetingCenterState.agendaItems[swapIndex], meetingCenterState.agendaItems[index]];
+      renderAgendaItems();
+    }
+
+    function applyMinutesTemplate() {
+      const template = meetingCenterState.meetingTemplates[document.getElementById('minutesTemplate')?.value || 'Board'] || '';
+      const bodyEl = document.getElementById('minutesBody');
+      if (!bodyEl) return;
+      bodyEl.value = template;
+    }
+
+    function clearMeetingForm() {
+      meetingCenterState.editingMeetingId = null;
+      const defaults = {
+        meetingTitle: '', meetingType: 'Board', meetingCommittee: '', meetingDepartment: '',
+        meetingPurpose: '', meetingDescription: '', meetingStatus: 'Scheduled', meetingPriority: 'Normal',
+        meetingConfidentiality: 'Normal', meetingOrganizer: '', meetingChairperson: '', meetingViceChair: '',
+        meetingSecretary: '', meetingAssistantSecretary: '', meetingMinuteTaker: '', meetingDate: '', meetingStartTime: '',
+        meetingEndTime: '', meetingVenue: '', meetingLink: '', minutesBody: ''
+      };
+      Object.entries(defaults).forEach(([key, value]) => {
+        const el = document.getElementById(key);
+        if (el) el.value = value;
+      });
+      meetingCenterState.agendaItems = [];
+      renderAgendaItems();
+    }
+
+    function openScheduleDialog() {
+      clearMeetingForm();
+      document.getElementById('meetingTitle')?.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function openGenerateMinutesDialog() {
+      document.getElementById('minutesBody')?.focus();
+    }
+
+    function previewSelectedMeeting() {
+      const selectedId = Array.from(meetingCenterState.selectedMeetingIds)[0];
+      if (!selectedId) return alert('Select one meeting record first.');
+      previewMeeting(selectedId);
+    }
+
+    function previewMeeting(id) {
+      const meeting = meetingCenterState.allMeetings.find(m => m.id === id);
+      if (!meeting) return alert('Meeting not found.');
+      alert(`Title: ${meeting.title || '-'}\nDate: ${meeting.meeting_date || '-'}\nTime: ${meeting.meeting_time || '-'}\nVenue: ${meeting.location || '-'}\nOrganizer: ${meeting.organizer || '-'}\nChairperson: ${meeting.chair || '-'}\nStatus: ${meeting.status || '-'}\nLink: ${meeting.meeting_url || '-'}\n\nAgenda:\n${meeting.agenda || '-'}\n\nNotes:\n${meeting.body || '-'}`);
+    }
+
+    async function openEditMeeting(id) {
+      const meeting = meetingCenterState.allMeetings.find(m => m.id === id);
+      if (!meeting) return alert('Meeting not found.');
+      meetingCenterState.editingMeetingId = meeting.id;
+      document.getElementById('meetingTitle').value = meeting.title || '';
+      document.getElementById('meetingType').value = meeting.meeting_type || 'Board';
+      document.getElementById('meetingCommittee').value = meeting.target_group || '';
+      document.getElementById('meetingDepartment').value = meeting.department || '';
+      document.getElementById('meetingPurpose').value = meeting.purpose || '';
+      document.getElementById('meetingDescription').value = meeting.description || '';
+      document.getElementById('meetingStatus').value = meeting.status || 'Scheduled';
+      document.getElementById('meetingPriority').value = meeting.priority || 'Normal';
+      document.getElementById('meetingConfidentiality').value = meeting.confidentiality || 'Normal';
+      document.getElementById('meetingOrganizer').value = meeting.organizer || '';
+      document.getElementById('meetingChairperson').value = meeting.chair || '';
+      document.getElementById('meetingViceChair').value = meeting.vice_chair || '';
+      document.getElementById('meetingSecretary').value = meeting.secretary || '';
+      document.getElementById('meetingAssistantSecretary').value = meeting.assistant_secretary || '';
+      document.getElementById('meetingMinuteTaker').value = meeting.minute_taker || '';
+      document.getElementById('meetingDate').value = meeting.meeting_date || '';
+      document.getElementById('meetingStartTime').value = meeting.meeting_time || '';
+      document.getElementById('meetingEndTime').value = meeting.end_time || '';
+      document.getElementById('meetingVenue').value = meeting.location || '';
+      document.getElementById('meetingLink').value = meeting.meeting_url || '';
+      document.getElementById('minutesBody').value = meeting.body || '';
+      meetingCenterState.agendaItems = meeting.agenda_items ? JSON.parse(meeting.agenda_items) : [];
+      renderAgendaItems();
+    }
+
+    async function deleteMeeting(id) {
+      if (!confirm('Delete this meeting?')) return;
+      try {
+        await apiCall('automation/meetings/' + id, { method: 'DELETE' });
+        alert('Meeting deleted.');
+        loadMeetingRecords();
+      } catch (e) {
+        alert('Delete failed: ' + (e.message || e));
+      }
+    }
+
+    async function saveMeetingRecord() {
+      const title = (document.getElementById('meetingTitle')?.value || '').trim();
+      const meetingDate = (document.getElementById('meetingDate')?.value || '').trim();
+      const meetingTime = (document.getElementById('meetingStartTime')?.value || '').trim();
+      const location = (document.getElementById('meetingVenue')?.value || '').trim();
+      const meetingUrl = (document.getElementById('meetingLink')?.value || '').trim();
+      const meetingType = (document.getElementById('meetingType')?.value || 'Board').trim();
+      const committee = (document.getElementById('meetingCommittee')?.value || '').trim();
+      const department = (document.getElementById('meetingDepartment')?.value || '').trim();
+      const purpose = (document.getElementById('meetingPurpose')?.value || '').trim();
+      const description = (document.getElementById('meetingDescription')?.value || '').trim();
+      const status = (document.getElementById('meetingStatus')?.value || 'Scheduled').trim();
+      const priority = (document.getElementById('meetingPriority')?.value || 'Normal').trim();
+      const confidentiality = (document.getElementById('meetingConfidentiality')?.value || 'Normal').trim();
+      const organizer = (document.getElementById('meetingOrganizer')?.value || '').trim();
+      const chair = (document.getElementById('meetingChairperson')?.value || '').trim();
+      const viceChair = (document.getElementById('meetingViceChair')?.value || '').trim();
+      const secretary = (document.getElementById('meetingSecretary')?.value || '').trim();
+      const assistantSecretary = (document.getElementById('meetingAssistantSecretary')?.value || '').trim();
+      const minuteTaker = (document.getElementById('meetingMinuteTaker')?.value || '').trim();
+      const endTime = (document.getElementById('meetingEndTime')?.value || '').trim();
+      if (!title || !meetingDate || !meetingTime) return alert('Please fill in Meeting Title, Date, and Start Time.');
+
+      const agenda = meetingCenterState.agendaItems.map((item, idx) => ({
+        title: item.title || `Agenda ${idx + 1}`,
+        presenter: item.presenter,
+        duration: item.duration,
+        description: item.description,
+        status: item.status,
+        notes: item.notes
+      }));
+      const payload = {
+        title,
+        meeting_date: meetingDate,
+        meeting_time: meetingTime,
+        location,
+        platform: 'Video & Conference',
+        target_group: committee || 'all',
+        subsidiary_slug: 'eldoret_main',
+        meeting_type: meetingType,
+        department,
+        status,
+        priority,
+        confidentiality,
+        organizer,
+        chair,
+        vice_chair: viceChair,
+        secretary,
+        assistant_secretary: assistantSecretary,
+        minute_taker: minuteTaker,
+        purpose,
+        description,
+        end_time: endTime || null,
+        meeting_url: meetingUrl,
+        agenda_items: JSON.stringify(agenda)
+      };
+
+      try {
+        if (meetingCenterState.editingMeetingId) {
+          await apiCall('automation/meetings/' + meetingCenterState.editingMeetingId, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+          });
+          alert('Meeting updated successfully.');
+          meetingCenterState.editingMeetingId = null;
+        } else {
+          await apiCall('automation/meetings/create', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          alert('Meeting scheduled successfully.');
+        }
+        loadMeetingRecords();
+      } catch (e) {
+        alert('Save failed: ' + (e.message || e));
+      }
+    }
+
+    async function sendMeetingLinkToMembers() {
+      const meetingUrl = (document.getElementById('meetingLink')?.value || '').trim();
+      const title = (document.getElementById('meetingTitle')?.value || 'TLMS Meeting').trim();
+      if (!meetingUrl || !meetingUrl.startsWith('http')) {
+        return alert('Enter a valid meeting URL before sending it to members.');
+      }
+      const message = `A meeting link has been shared for ${title}.\n\nJoin here: ${meetingUrl}`;
+      try {
+        await apiCall('messages/broadcast', {
+          method: 'POST',
+          body: JSON.stringify({ subject: `Meeting Link: ${title}`, body: message, target_group: 'all' })
+        });
+        if (meetingCenterState.editingMeetingId) {
+          await apiCall('automation/meetings/' + meetingCenterState.editingMeetingId, {
+            method: 'PUT',
+            body: JSON.stringify({ meeting_url: meetingUrl })
+          });
+        }
+        await apiCall('minutes/save', {
+          method: 'POST',
+          body: JSON.stringify({
+            title: `Meeting Link Shared: ${title}`,
+            date: (document.getElementById('meetingDate')?.value || new Date().toISOString().slice(0, 10)),
+            venue: (document.getElementById('meetingVenue')?.value || ''),
+            chair: (document.getElementById('meetingChairperson')?.value || ''),
+            attendees: meetingCenterState.members.map(m => m.full_name).join(', '),
+            agenda: meetingCenterState.agendaItems.map((item, idx) => `${idx + 1}. ${item.title || 'Agenda item'}`).join('\n'),
+            body: message,
+            next_meeting_date: (document.getElementById('meetingDate')?.value || null),
+            secretary: (document.getElementById('meetingSecretary')?.value || ''),
+            meeting_url: meetingUrl
+          })
+        });
+        alert('Meeting link sent to members and saved.');
+      } catch (e) {
+        alert('Failed to send meeting link: ' + (e.message || e));
+      }
+    }
+
+    function shareMeetingLinkByEmail() { alert('Email sharing is handled through the default mail client.'); }
+    function copyMeetingLink() { navigator.clipboard.writeText(document.getElementById('meetingLink')?.value || ''); alert('Meeting link copied to clipboard.'); }
+    async function archiveSelectedMeetings() {
+      if (!meetingCenterState.selectedMeetingIds.size) return alert('Select one or more meetings first.');
+      if (!confirm('Archive selected meeting records?')) return;
+      const ids = Array.from(meetingCenterState.selectedMeetingIds);
+      try {
+        await Promise.all(ids.map(id => apiCall('automation/meetings/' + id, {
+          method: 'PUT',
+          body: JSON.stringify({ status: 'Archived' })
+        })));
+        meetingCenterState.selectedMeetingIds.clear();
+        loadMeetingRecords();
+      } catch (e) {
+        alert('Archive failed: ' + (e.message || e));
+      }
+    }
+    async function restoreSelectedMeetings() {
+      if (!meetingCenterState.selectedMeetingIds.size) return alert('Select one or more meetings first.');
+      if (!confirm('Restore selected meeting records to scheduled?')) return;
+      const ids = Array.from(meetingCenterState.selectedMeetingIds);
+      try {
+        await Promise.all(ids.map(id => apiCall('automation/meetings/' + id, {
+          method: 'PUT',
+          body: JSON.stringify({ status: 'Scheduled' })
+        })));
+        meetingCenterState.selectedMeetingIds.clear();
+        loadMeetingRecords();
+      } catch (e) {
+        alert('Restore failed: ' + (e.message || e));
+      }
+    }
+    async function deleteSelectedMeetings() {
+      if (!meetingCenterState.selectedMeetingIds.size) return alert('Select meetings first.');
+      if (!confirm('Delete all selected meetings? This cannot be undone.')) return;
+      const ids = Array.from(meetingCenterState.selectedMeetingIds);
+      try {
+        await Promise.all(ids.map(id => apiCall('automation/meetings/' + id, { method: 'DELETE' })));
+        meetingCenterState.selectedMeetingIds.clear();
+        loadMeetingRecords();
+      } catch (e) {
+        alert('Bulk delete failed: ' + (e.message || e));
+      }
+    }
+    function refreshMeetingCenter() { loadMeetingRecords(); }
+
+    function saveMinutesRecord() {
+      openGenerateMinutesDialog();
+      alert('Update the minutes text and then click Save Meeting at the top to persist this meeting.');
+    }
+
+    function exportMeetingsAsPDF() {
+      window.print();
+      alert('Use the browser print dialog to save this page as PDF.');
+    }
+
+    function exportMeetingsAsDocx() {
+      alert('DOCX export is not available in this version.');
+    }
+
+    function sendMeetingNotification() {
+      sendMeetingLinkToMembers();
+    }
+
+    function shareMeetingLinkToMembers() {
+      sendMeetingLinkToMembers();
+    }
+
+    document.addEventListener('DOMContentLoaded', initializeMeetingCenter);
+  </script>
+</body>
+</html>
