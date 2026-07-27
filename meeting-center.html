@@ -754,6 +754,13 @@
         const el = document.getElementById(key);
         if (el) el.value = value;
       });
+      ['meetingPresent', 'meetingAbsent', 'meetingApology', 'meetingGuests'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) Array.from(el.options).forEach(opt => opt.selected = false);
+      });
+      const notesEl = document.getElementById('attendanceNotes');
+      if (notesEl) notesEl.value = '';
+
       meetingCenterState.agendaItems = [];
       renderAgendaItems();
     }
@@ -804,6 +811,30 @@
       document.getElementById('meetingVenue').value = meeting.location || '';
       document.getElementById('meetingLink').value = meeting.meeting_url || '';
       document.getElementById('minutesBody').value = meeting.body || '';
+
+      ['meetingPresent', 'meetingAbsent', 'meetingApology', 'meetingGuests'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) Array.from(el.options).forEach(opt => opt.selected = false);
+      });
+      document.getElementById('attendanceNotes').value = '';
+      if (meeting.attendance_data) {
+        try {
+          const att = JSON.parse(meeting.attendance_data);
+          if (att.notes) document.getElementById('attendanceNotes').value = att.notes;
+          ['present', 'absent', 'apology', 'guests'].forEach(key => {
+            const elId = 'meeting' + key.charAt(0).toUpperCase() + key.slice(1);
+            const el = document.getElementById(elId);
+            if (el && Array.isArray(att[key])) {
+              Array.from(el.options).forEach(opt => {
+                if (att[key].includes(opt.value)) opt.selected = true;
+              });
+            }
+          });
+        } catch (e) {
+          console.warn('Failed to parse attendance_data', e);
+        }
+      }
+
       meetingCenterState.agendaItems = meeting.agenda_items ? JSON.parse(meeting.agenda_items) : [];
       renderAgendaItems();
     }
@@ -875,6 +906,15 @@
         meeting_url: meetingUrl,
         agenda_items: JSON.stringify(agenda)
       };
+
+      const attendanceObj = {
+        present: Array.from(document.getElementById('meetingPresent')?.selectedOptions || []).map(o => o.value),
+        absent: Array.from(document.getElementById('meetingAbsent')?.selectedOptions || []).map(o => o.value),
+        apology: Array.from(document.getElementById('meetingApology')?.selectedOptions || []).map(o => o.value),
+        guests: Array.from(document.getElementById('meetingGuests')?.selectedOptions || []).map(o => o.value),
+        notes: (document.getElementById('attendanceNotes')?.value || '').trim()
+      };
+      payload.attendance_data = JSON.stringify(attendanceObj);
 
       try {
         if (meetingCenterState.editingMeetingId) {

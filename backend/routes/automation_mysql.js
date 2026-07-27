@@ -149,7 +149,7 @@ router.get('/meetings', async (req, res) => {
       `SELECT id, title, meeting_date, meeting_time, location, platform, target_group, subsidiary_slug,
               meeting_type, department, status, priority, confidentiality, organizer, chair, vice_chair,
               secretary, assistant_secretary, minute_taker, purpose, description, end_time, meeting_url,
-              agenda_items, attendance_count, minutes_status, created_at, updated_at
+              agenda_items, attendance_count, minutes_status, created_at, updated_at, attendance_data
        FROM scheduled_meetings WHERE admin_id = :adminId ORDER BY created_at DESC`,
       { type: sequelize.QueryTypes.SELECT, replacements: { adminId: admin.id } }
     );
@@ -170,7 +170,7 @@ router.post('/meetings/create', async (req, res) => {
       title, meeting_date, meeting_time, location, platform, target_group, subsidiary_slug,
       meeting_type, department, status, priority, confidentiality,
       organizer, chair, vice_chair, secretary, assistant_secretary, minute_taker,
-      purpose, description, end_time, meeting_url, agenda_items
+      purpose, description, end_time, meeting_url, agenda_items, attendance_data
     } = req.body || {};
     if (!title || !meeting_date || !meeting_time) return fail(res, 400, 'Missing required meeting fields');
 
@@ -178,10 +178,10 @@ router.post('/meetings/create', async (req, res) => {
       `INSERT INTO scheduled_meetings
          (admin_id, title, meeting_date, meeting_time, location, platform, target_group, subsidiary_slug,
           meeting_type, department, status, priority, confidentiality, organizer, chair, vice_chair,
-          secretary, assistant_secretary, minute_taker, purpose, description, end_time, meeting_url, agenda_items)
+          secretary, assistant_secretary, minute_taker, purpose, description, end_time, meeting_url, agenda_items, attendance_data)
        VALUES (:admin_id, :title, :meeting_date, :meeting_time, :location, :platform, :target_group, :subsidiary_slug,
                :meeting_type, :department, :status, :priority, :confidentiality, :organizer, :chair, :vice_chair,
-               :secretary, :assistant_secretary, :minute_taker, :purpose, :description, :end_time, :meeting_url, :agenda_items)`,
+               :secretary, :assistant_secretary, :minute_taker, :purpose, :description, :end_time, :meeting_url, :agenda_items, :attendance_data)`,
       {
         type: sequelize.QueryTypes.INSERT,
         replacements: {
@@ -208,7 +208,8 @@ router.post('/meetings/create', async (req, res) => {
           description: String(description || ''),
           end_time: end_time ? String(end_time) : null,
           meeting_url: String(meeting_url || ''),
-          agenda_items: String(agenda_items || '')
+          agenda_items: String(agenda_items || ''),
+          attendance_data: String(attendance_data || '')
         }
       }
     );
@@ -232,7 +233,7 @@ router.put('/meetings/:id', async (req, res) => {
     const {
       title, meeting_date, meeting_time, location, platform, target_group, subsidiary_slug,
       meeting_type, department, status, priority, confidentiality, organizer, chair, vice_chair,
-      secretary, assistant_secretary, minute_taker, purpose, description, end_time, meeting_url, agenda_items
+      secretary, assistant_secretary, minute_taker, purpose, description, end_time, meeting_url, agenda_items, attendance_data
     } = req.body || {};
 
     const updateFields = [];
@@ -261,6 +262,7 @@ router.put('/meetings/:id', async (req, res) => {
     if (end_time !== undefined) { updateFields.push('end_time = :end_time'); replacements.end_time = end_time ? String(end_time) : null; }
     if (meeting_url !== undefined) { updateFields.push('meeting_url = :meeting_url'); replacements.meeting_url = String(meeting_url || ''); }
     if (agenda_items !== undefined) { updateFields.push('agenda_items = :agenda_items'); replacements.agenda_items = String(agenda_items || ''); }
+    if (attendance_data !== undefined) { updateFields.push('attendance_data = :attendance_data'); replacements.attendance_data = String(attendance_data || ''); }
 
     if (!updateFields.length) return fail(res, 400, 'No fields provided for update');
 
@@ -318,7 +320,7 @@ router.get('/meetings/member/:memberId/active', async (req, res) => {
       `SELECT id, title, meeting_date, meeting_time, location, platform, target_group,
               meeting_type, department, status, priority, confidentiality, organizer, chair,
               vice_chair, secretary, assistant_secretary, minute_taker, purpose, description,
-              end_time, meeting_url, agenda_items, attendance_count, minutes_status, created_at, updated_at
+              end_time, meeting_url, agenda_items, attendance_count, minutes_status, created_at, updated_at, attendance_data
        FROM scheduled_meetings
        WHERE admin_id = :adminId AND meeting_date >= CURDATE()
        ORDER BY meeting_date ASC, meeting_time ASC`,
@@ -351,7 +353,7 @@ router.get('/meetings/member/:memberId/past', async (req, res) => {
       `SELECT id, title, meeting_date, meeting_time, location, platform, target_group,
               meeting_type, department, status, priority, confidentiality, organizer, chair,
               vice_chair, secretary, assistant_secretary, minute_taker, purpose, description,
-              end_time, meeting_url, agenda_items, attendance_count, minutes_status, created_at, updated_at
+              end_time, meeting_url, agenda_items, attendance_count, minutes_status, created_at, updated_at, attendance_data
        FROM scheduled_meetings
        WHERE admin_id = :adminId AND meeting_date < CURDATE()
        ORDER BY meeting_date DESC, meeting_time DESC
