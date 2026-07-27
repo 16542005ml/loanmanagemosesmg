@@ -25,17 +25,25 @@ function goToHome() {
   window.location.href = "landingpage.html"; 
 }
 document.querySelector('form').addEventListener('submit', function(e) {
-    e.preventDefault(); // Halt page bounce mechanisms to intercept processing cleanly
+    e.preventDefault();
 
     const formData = new FormData(this);
+    const btn = this.querySelector('button[type="submit"]');
+    if (btn) { btn.disabled = true; btn.textContent = 'Logging in...'; }
 
     fetch(`${API}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(Object.fromEntries(formData.entries()))
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok && response.status !== 200) {
+            return response.json().catch(() => ({ status: 'error', message: `Server error (${response.status}). Please try again.` }));
+        }
+        return response.json();
+    })
     .then(data => {
+        if (btn) { btn.disabled = false; btn.textContent = 'LOGIN'; }
         if (data.status === 'success') {
             // Clear any stale session data from previous timeout
             sessionStorage.removeItem('homeSessionTimedOut');
@@ -54,13 +62,20 @@ document.querySelector('form').addEventListener('submit', function(e) {
             localStorage.setItem('disableBlurEffect', 'true');
             alert(data.message || 'Successfully logged in. Opening your session...');
             setTimeout(() => {
-                window.location.href = data.redirect; // Safely enters home.html dashboard
+                window.location.href = data.redirect || 'home.html';
             }, 350);
         } else {
-            alert("Authentication Intercept Error: " + data.message);
+            alert('Login failed: ' + (data.message || 'Invalid credentials. Please try again.'));
         }
     })
-    .catch(error => console.error("Pipeline credential delivery failure: ", error));
+    .catch(error => {
+        if (btn) { btn.disabled = false; btn.textContent = 'LOGIN'; }
+        console.error('Login fetch error:', error);
+        const isOffline = !navigator.onLine || error.message === 'Failed to fetch';
+        alert(isOffline
+            ? 'Cannot reach the server. Please check your internet connection and try again.'
+            : 'A network error occurred. Please try again.');
+    });
 });
 
 // Admin Password Recovery Logic

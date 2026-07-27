@@ -180,21 +180,15 @@
             }
         });
     }
+    // Only clear inputs after a successful form SUBMIT (not on every button click),
+    // so that the fetch response can be processed first.
     document.addEventListener('submit', function (e) {
-        setTimeout(function () { clearInputsInContainer(e.target); }, 100);
-    });
-    document.addEventListener('click', function (e) {
-        var btn = e.target.closest('button, input[type="button"], input[type="submit"]');
-        if (btn) {
-            setTimeout(function () {
-                var container = btn.closest('form') || btn.closest('.form-inputs') || btn.closest('.auth-card') || btn.closest('.popup-box') || btn.closest('.error-card');
-                if (container) clearInputsInContainer(container);
-            }, 100);
-        }
+        setTimeout(function () { clearInputsInContainer(e.target); }, 1500);
     });
 
     // Define Global API Base URL
-    var defaultRailwayUrl = 'https://new-lm-pages-production.up.railway.app';
+    // Update this to the current production backend URL whenever the deployment changes.
+    var defaultRailwayUrl = 'https://project2026-64ro.onrender.com';
     var apiBase = '/api';
     if (typeof window !== 'undefined' && window.location) {
         try {
@@ -206,14 +200,28 @@
         } catch (e) {}
 
         if (window.location.protocol === 'file:') {
+            // Local file system — always point to local dev server
             apiBase = 'http://127.0.0.1:4000/api';
-        } else {
+        } else if (window.location.hostname.endsWith('github.io')) {
+            // GitHub Pages — must use external backend
             var customBackend = localStorage.getItem('railway_backend_url');
-            if (customBackend) {
-                apiBase = customBackend.replace(/\/$/, '') + '/api';
-            } else if (window.location.hostname.endsWith('github.io')) {
-                apiBase = defaultRailwayUrl + '/api';
-            }
+            apiBase = (customBackend ? customBackend.replace(/\/$/, '') : defaultRailwayUrl) + '/api';
+        } else {
+            // Served from the actual backend server (Render, Railway, local node, etc.)
+            // Always use same-origin relative API path — this is the correct and safe behaviour.
+            // Clear any stale absolute backend URL that may be cached from a different deployment.
+            try {
+                var cachedBackend = localStorage.getItem('railway_backend_url');
+                if (cachedBackend) {
+                    var cachedOrigin = cachedBackend.replace(/\/$/, '');
+                    var currentOrigin = window.location.origin;
+                    if (cachedOrigin !== currentOrigin) {
+                        // Stale entry from old deployment — remove it so we use relative /api
+                        localStorage.removeItem('railway_backend_url');
+                    }
+                }
+            } catch (e) {}
+            apiBase = '/api';
         }
     }
     window.__API_BASE__ = apiBase;

@@ -5,12 +5,17 @@ const TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 function getSecret() {
   const secret = process.env.ADMIN_TOKEN_SECRET || process.env.SESSION_SECRET;
   if (!secret) {
+    const randomSecret = require('crypto').randomBytes(32).toString('hex');
     if (process.env.NODE_ENV === 'production') {
-      throw new Error('FATAL: ADMIN_TOKEN_SECRET or SESSION_SECRET must be set in environment for production.');
+      // CRITICAL: Sessions will not survive server restarts without this env var set.
+      // Set ADMIN_TOKEN_SECRET in your hosting platform's environment variables.
+      console.error('[SECURITY] CRITICAL: ADMIN_TOKEN_SECRET is not set in production environment!');
+      console.error('[SECURITY] All admin sessions will be invalidated on every server restart.');
+      console.error('[SECURITY] Set ADMIN_TOKEN_SECRET in your Render/Railway environment variables immediately.');
+    } else {
+      console.warn('[SECURITY] WARNING: Using auto-generated token secret. Set ADMIN_TOKEN_SECRET in .env for persistent sessions.');
     }
-    console.warn('[SECURITY] WARNING: Using auto-generated token secret. Set ADMIN_TOKEN_SECRET in .env for persistent sessions.');
-    // Generate a per-process random secret so tokens don't survive restarts
-    return crypto.randomBytes(32).toString('hex');
+    return randomSecret;
   }
   return secret;
 }
