@@ -3,6 +3,7 @@
 
 <head>
   <script src="utils/security.js"></script>
+  <script src="utils/sessionTimeout.js"></script>
   <meta charset="UTF-8">
   <title>Eldoret Chama Table-Banking Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1914,31 +1915,51 @@
         }
     }
 
-    // Apply the disable blur effect logic on page load
+    // ── Blur gate boot: validate admin session FIRST before any fetch ──
     window.addEventListener("DOMContentLoaded", async () => {
-        // If session timed out, redirect to login instead of showing blur
+        // 1. Check homeSessionTimedOut flag (set when admin idle timer fires)
         if (sessionStorage.getItem('homeSessionTimedOut') === 'true') {
             sessionStorage.removeItem('homeSessionTimedOut');
             sessionStorage.removeItem('adminSession');
             localStorage.removeItem('disableBlurEffect');
-            window.location.href = 'login.html';
+            window.location.replace('login.html');
             return;
         }
 
-        // Lock browser back button — admin must re-authenticate
+        // 2. Validate admin session — must exist and not be older than 8 hours
+        let adminSession = null;
+        try { adminSession = JSON.parse(sessionStorage.getItem('adminSession') || 'null'); } catch (_) {}
+        const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000; // 8 hours
+        const sessionAge = adminSession && adminSession.timestamp ? Date.now() - adminSession.timestamp : Infinity;
+
+        if (!adminSession || !adminSession.token || sessionAge > SESSION_MAX_AGE_MS) {
+            // No valid session — clear everything and send to login
+            sessionStorage.removeItem('adminSession');
+            localStorage.removeItem('disableBlurEffect');
+            window.location.replace('login.html');
+            return;
+        }
+
+        // 3. Lock browser back button — admin must re-authenticate on back-nav
         history.pushState(null, '', location.href);
         window.addEventListener('popstate', () => {
             sessionStorage.removeItem('adminSession');
             sessionStorage.removeItem('homeSessionTimedOut');
             localStorage.removeItem('disableBlurEffect');
-            window.location.href = 'login.html';
+            window.location.replace('login.html');
         });
 
+        // 4. Fetch blur state from DB (now we know the session is valid)
         try {
-            const res = await fetch(`${API}/settings/blur`);
+            const res = await fetch(`${API}/settings/blur`, {
+                headers: { 'Authorization': 'Bearer ' + (adminSession.token || '') }
+            });
             const data = await res.json();
             applyBlurState(Boolean(data.blurEnabled));
-        } catch(e) {}
+        } catch(e) {
+            // If blur fetch fails, just show unlocked (don't block the admin)
+            applyBlurState(false);
+        }
     });
   </script>
   <!-- Deleted Records Tracker Modal Popup -->

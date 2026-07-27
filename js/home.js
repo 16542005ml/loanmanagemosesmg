@@ -204,6 +204,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   // initial fit
   scaleMainContent();
   startHomeAutoRefresh();
+
+  // ── Admin session timeout: 20 minutes of inactivity → logout ──
+  if (typeof initSessionTimeout === 'function') {
+    initSessionTimeout({
+      timeoutMinutes: 20,
+      onTimeout: () => {
+        // Signal blur gate to redirect on next load
+        sessionStorage.setItem('homeSessionTimedOut', 'true');
+        // Stop refresh to prevent further API calls
+        if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+        // Clear session
+        try { sessionStorage.removeItem('adminSession'); } catch (_) {}
+        try { localStorage.removeItem('disableBlurEffect'); } catch (_) {}
+        // Redirect immediately
+        window.location.replace('login.html');
+      }
+    });
+  }
 });
 
 function scaleMainContent() {
@@ -2239,7 +2257,46 @@ async function loadAutomationMeetings() {
     const rows = await apiCall('automation/meetings', { method: 'GET' });
     scheduledMeetings = rows || [];
     renderMeetingsList();
+    // Update the bell alert badge with upcoming meeting count
+    const today = new Date().toISOString().split('T')[0];
+    const upcomingCount = scheduledMeetings.filter(m => m.meeting_date >= today && m.status !== 'Cancelled').length;
+    const badgeEl = document.getElementById('adminCountReminders');
+    if (badgeEl) badgeEl.textContent = upcomingCount;
   } catch (e) { console.warn('[loadAutomationMeetings]', e.message); }
+}
+
+// ── Send meeting join link to members as a broadcast message ──
+async function sendMeetingLinkToMembers(meetingId) {
+  const meeting = scheduledMeetings.find(m => String(m.id) === String(meetingId));
+  if (!meeting) return alert('Meeting not found.');
+  if (!meeting.meeting_url) return alert('This meeting has no URL/link set. Edit the meeting first to add a link.');
+
+  const dateDisplay = new Date(meeting.meeting_date).toLocaleDateString('en-KE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const subject = `📅 Meeting Link: ${meeting.title}`;
+  const body = [
+    `You are invited to the following meeting:`,
+    ``,
+    `Title:    ${meeting.title}`,
+    `Date:     ${dateDisplay}`,
+    `Time:     ${meeting.meeting_time}${meeting.end_time ? ' — ' + meeting.end_time : ''}`,
+    `Venue:    ${meeting.location || 'See link below'}`,
+    `Platform: ${meeting.platform || 'Virtual'}`,
+    ``,
+    `Join Link: ${meeting.meeting_url}`,
+    ``,
+    meeting.purpose ? `Purpose: ${meeting.purpose}` : '',
+    meeting.agenda_items ? `Agenda:\n${meeting.agenda_items}` : ''
+  ].filter(Boolean).join('\n');
+
+  if (!confirm(`Send meeting link for "${meeting.title}" to ${meeting.target_group === 'all' ? 'all members' : meeting.target_group + ' group'}?`)) return;
+
+  try {
+    await broadcastAdminMessage(subject, body, meeting.target_group || 'all');
+    logNotification(`📤 Meeting link sent to members: <strong>${meeting.title}</strong>`);
+    alert('Meeting link successfully sent to members!');
+  } catch (e) {
+    alert('Failed to send meeting link: ' + (e.message || 'Unknown error'));
+  }
 }
 
 function renderMeetingsList() {
@@ -2275,11 +2332,14 @@ function renderMeetingsList() {
             ${m.priority && m.priority !== 'Normal' ? `<span style="margin-left:4px;font-size:11px;color:${priorityColor};font-weight:700;">${m.priority}</span>` : ''}
           </div>
           <div style="display:flex;gap:6px;flex-shrink:0;">
-            <button onclick="openMeetingModal(${mSafe})" title="Edit" style="background:rgba(0,224,255,0.15);border:1px solid rgba(0,224,255,0.3);color:#00e0ff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">
+            <button onclick="openMeetingModal(${mSafe})" title="Edit meeting" style="background:rgba(0,224,255,0.15);border:1px solid rgba(0,224,255,0.3);color:#00e0ff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">
               <i class="fas fa-edit"></i>
             </button>
+            ${m.meeting_url ? `<button onclick="sendMeetingLinkToMembers('${m.id}')" title="Send meeting link to members" style="background:rgba(0,119,255,0.18);border:1px solid rgba(0,119,255,0.35);color:#5599ff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:600;">
+              <i class="fas fa-paper-plane"></i> Send Link
+            </button>` : ''}
             <button onclick="deleteMeeting('${m.id}', '${(m.title||'').replace(/'/g,"\\'")}')"
-              title="Delete" style="background:rgba(244,67,54,0.12);border:1px solid rgba(244,67,54,0.3);color:#f44336;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">
+              title="Delete meeting" style="background:rgba(244,67,54,0.12);border:1px solid rgba(244,67,54,0.3);color:#f44336;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">
               <i class="fas fa-trash"></i>
             </button>
           </div>
@@ -5008,8 +5068,9 @@ function toggleAdminDropdown() {
 // ─────────────────────────────────────────────────────────────
 function adminLogout() {
   if (!confirm('Are you sure you want to sign out?')) return;
-  // Stop auto-refresh to prevent further API calls
+  // Stop auto-refresh + cancel idle timer to prevent further callbacks
   if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+  try { if (typeof cancelSessionTimeout === 'function') cancelSessionTimeout(); } catch (_) {}
   // Clear the admin session (set by login.js on successful login)
   try { sessionStorage.removeItem('adminSession'); } catch (_) {}
   try { sessionStorage.clear(); } catch (_) {}
@@ -5035,115 +5096,99 @@ function openMeetingModal(meeting = null) {
 
   const overlay = document.createElement('div');
   overlay.id = 'meetingModal';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:200000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto;';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:200000;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto;';
 
   const today = new Date().toISOString().split('T')[0];
   const m = meeting || {};
+  const inp = (id, type, ph, val, extra='') =>
+    `<input id="${id}" type="${type}" placeholder="${ph}" value="${val||''}" ${extra}
+      style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.45);
+             border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">`.replace(/\n\s+/g,' ');
+  const sel = (id, opts, cur, extra='') =>
+    `<select id="${id}" ${extra} style="width:100%;box-sizing:border-box;padding:10px;background:#0d1526;
+       border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+      ${opts.map(([v,l])=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`).join('')}
+     </select>`.replace(/\n\s+/g,' ');
+  const lbl = (txt, required='') =>
+    `<label style="font-size:11px;color:${required?'#00e0ff':'#888'};display:block;margin-bottom:4px;letter-spacing:0.3px;
+             text-transform:uppercase;font-weight:600;">${txt}${required?' *':''}</label>`.replace(/\n\s+/g,' ');
+  const row2 = (a,b) => `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">${a}${b}</div>`;
+  const row3 = (a,b,c) => `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">${a}${b}${c}</div>`;
+  const field = (label, input, required='') => `<div>${lbl(label,required)}${input}</div>`;
 
   overlay.innerHTML = `
-    <div style="background:#111b2f;border:1px solid rgba(0,224,255,0.3);border-radius:12px;width:min(640px,96vw);max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;">
-        <h3 style="margin:0;color:#00e0ff;font-size:18px;">${meeting ? '✏️ Edit Meeting' : '📅 Schedule New Meeting'}</h3>
-        <button onclick="document.getElementById('meetingModal').remove()" style="background:none;border:none;color:#aaa;font-size:22px;cursor:pointer;">✕</button>
+    <div style="background:#111b2f;border:1px solid rgba(0,224,255,0.3);border-radius:14px;width:min(680px,96vw);max-height:92vh;overflow-y:auto;padding:28px;box-shadow:0 24px 64px rgba(0,0,0,0.8);">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:14px;">
+        <div>
+          <h3 style="margin:0;color:#00e0ff;font-size:19px;">${meeting ? '✏️ Edit Meeting' : '📅 Schedule New Meeting'}</h3>
+          <div style="font-size:12px;color:#666;margin-top:3px;">Fill in the required fields (*) then click Save.</div>
+        </div>
+        <button onclick="document.getElementById('meetingModal').remove()" style="background:rgba(255,255,255,0.07);border:none;color:#aaa;font-size:20px;cursor:pointer;border-radius:6px;width:36px;height:36px;">✕</button>
       </div>
-      <form id="meetingForm" onsubmit="submitMeetingForm(event)" style="display:grid;gap:12px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Meeting Title *</label>
-            <input id="mTitle" required placeholder="e.g. Monthly Board Meeting" value="${m.title||''}"
-              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
-          </div>
-          <div>
-            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Meeting Type</label>
-            <select id="mType" style="width:100%;box-sizing:border-box;padding:10px;background:#111b2f;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
-              ${['Board','General','Emergency','Finance','Special'].map(t=>`<option value="${t}" ${(m.meeting_type||'Board')===t?'selected':''}>${t}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-          <div>
-            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Date *</label>
-            <input id="mDate" type="date" required value="${m.meeting_date||today}"
-              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
-          </div>
-          <div>
-            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Start Time *</label>
-            <input id="mTime" type="time" required value="${m.meeting_time||''}"
-              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
-          </div>
-          <div>
-            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">End Time</label>
-            <input id="mEndTime" type="time" value="${m.end_time||''}"
-              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Location / Venue</label>
-            <input id="mLocation" placeholder="e.g. Boardroom A" value="${m.location||''}"
-              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
-          </div>
-          <div>
-            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Platform / Mode</label>
-            <select id="mPlatform" style="width:100%;box-sizing:border-box;padding:10px;background:#111b2f;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
-              ${['In Person','Virtual','Hybrid','Email Engine'].map(p=>`<option value="${p}" ${(m.platform||'In Person')===p?'selected':''}>${p}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Chairperson</label>
-            <input id="mChair" placeholder="Name of chairperson" value="${m.chair||''}"
-              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
-          </div>
-          <div>
-            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Secretary</label>
-            <input id="mSecretary" placeholder="Name of secretary" value="${m.secretary||''}"
-              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
-          </div>
-        </div>
+
+      <form id="meetingForm" onsubmit="submitMeetingForm(event)" style="display:grid;gap:14px;">
+
+        <!-- 1. TITLE — full width -->
+        ${field('Meeting Title', inp('mTitle','text','e.g. Monthly Board Meeting — Eldoret Chama',m.title), 'required')}
+
+        <!-- 2. DATE / TIME — 3 columns -->
+        ${row3(
+          field('Meeting Date', inp('mDate','date','',m.meeting_date||today), 'required'),
+          field('Start Time',   inp('mTime','time','',m.meeting_time),         'required'),
+          field('End Time',     inp('mEndTime','time','Optional',m.end_time))
+        )}
+
+        <!-- 3. LOCATION / PLATFORM -->
+        ${row2(
+          field('Venue / Location', inp('mLocation','text','e.g. Boardroom A or Online',m.location)),
+          field('Platform / Mode',  sel('mPlatform',[['In Person','In Person'],['Virtual','Virtual'],['Hybrid','Hybrid / Both'],['Email Engine','Email Engine']],m.platform||'In Person'))
+        )}
+
+        <!-- 4. MEETING URL — full width with helper note -->
         <div>
-          <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Meeting URL / Link</label>
-          <input id="mUrl" type="url" placeholder="https://meet.google.com/..." value="${m.meeting_url||''}"
-            style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+          ${lbl('Meeting Join URL / Link')}
+          ${inp('mUrl','url','https://meet.google.com/xxx-xxxx-xxx  or Zoom link',m.meeting_url)}
+          <div style="font-size:11px;color:#555;margin-top:4px;">💡 Tip: After saving, use the <strong style="color:#00e0ff;">📤 Send Link</strong> button to broadcast this to members.</div>
         </div>
-        <div>
-          <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Purpose / Description</label>
-          <textarea id="mPurpose" rows="2" placeholder="Brief description of meeting purpose..."
-            style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;resize:vertical;">${m.purpose||''}</textarea>
+
+        <!-- 5. CHAIRPERSON / SECRETARY -->
+        ${row2(
+          field('Chairperson', inp('mChair','text','Full name of meeting chair',m.chair)),
+          field('Secretary',   inp('mSecretary','text','Full name of secretary',m.secretary))
+        )}
+
+        <!-- 6. PURPOSE -->
+        ${field('Purpose / Meeting Objective', `<textarea id="mPurpose" rows="2" placeholder="Briefly describe why this meeting is being held..."
+          style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;resize:vertical;">${m.purpose||''}</textarea>`)}
+
+        <!-- 7. AGENDA ITEMS -->
+        ${field('Agenda Items', `<textarea id="mAgenda" rows="4" placeholder="1. Approval of previous minutes\n2. Financial report\n3. New member updates\n4. AOB"
+          style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;resize:vertical;">${m.agenda_items||''}</textarea>`)}
+
+        <!-- 8. ADMIN DROPDOWNS — Type / Priority / Status / Target -->
+        <div style="border-top:1px solid rgba(255,255,255,0.07);padding-top:12px;margin-top:2px;">
+          <div style="font-size:11px;color:#555;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.4px;">Classification &amp; Status</div>
+          ${row2(
+            row2(
+              field('Meeting Type', sel('mType',[['Board','Board'],['General','General'],['Emergency','Emergency'],['Finance','Finance'],['Special','Special']],m.meeting_type||'Board')),
+              field('Priority',     sel('mPriority',[['Normal','Normal'],['High','High'],['Urgent','🔴 Urgent']],m.priority||'Normal'))
+            ),
+            row2(
+              field('Status',       sel('mStatus',[['Scheduled','Scheduled'],['In Progress','In Progress'],['Completed','Completed'],['Cancelled','Cancelled']],m.status||'Scheduled')),
+              field('Target Group', sel('mTarget',[['all','All Members'],['board','Board Only'],['members','General Members'],['finance','Finance Team'],['special','Special Group']],m.target_group||'all'))
+            )
+          )}
         </div>
-        <div>
-          <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Agenda Items</label>
-          <textarea id="mAgenda" rows="3" placeholder="1. Approval of previous minutes&#10;2. Financial report&#10;3. AOB"
-            style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;resize:vertical;">${m.agenda_items||''}</textarea>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-          <div>
-            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Priority</label>
-            <select id="mPriority" style="width:100%;box-sizing:border-box;padding:10px;background:#111b2f;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
-              ${['Normal','High','Urgent'].map(p=>`<option value="${p}" ${(m.priority||'Normal')===p?'selected':''}>${p}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Status</label>
-            <select id="mStatus" style="width:100%;box-sizing:border-box;padding:10px;background:#111b2f;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
-              ${['Scheduled','In Progress','Completed','Cancelled'].map(s=>`<option value="${s}" ${(m.status||'Scheduled')===s?'selected':''}>${s}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Target Group</label>
-            <select id="mTarget" style="width:100%;box-sizing:border-box;padding:10px;background:#111b2f;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
-              ${['all','board','members','finance','special'].map(g=>`<option value="${g}" ${(m.target_group||'all')===g?'selected':''}>${g.charAt(0).toUpperCase()+g.slice(1)}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-        <div id="meetingFormError" style="display:none;color:#ff8a80;font-size:12px;padding:6px 10px;background:rgba(244,67,54,0.1);border-radius:6px;"></div>
-        <div style="display:flex;gap:10px;margin-top:4px;">
+
+        <!-- ERROR + BUTTONS -->
+        <div id="meetingFormError" style="display:none;color:#ff8a80;font-size:12px;padding:8px 12px;background:rgba(244,67,54,0.12);border-radius:6px;border:1px solid rgba(244,67,54,0.2);"></div>
+        <div style="display:flex;gap:10px;margin-top:6px;">
           <button type="button" onclick="document.getElementById('meetingModal').remove()"
-            style="flex:1;padding:11px;background:#333;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Cancel</button>
+            style="flex:1;padding:12px;background:rgba(255,255,255,0.07);color:#aaa;border:1px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;font-weight:600;">Cancel</button>
           <button type="submit" id="meetingSubmitBtn"
-            style="flex:2;padding:11px;background:linear-gradient(90deg,#00e0ff,#0077ff);color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:14px;">
-            ${meeting ? 'Save Changes' : '📅 Schedule Meeting'}
+            style="flex:3;padding:12px;background:linear-gradient(90deg,#00e0ff,#0077ff);color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:800;font-size:15px;letter-spacing:0.2px;">
+            ${meeting ? '💾 Save Changes' : '📅 Schedule Meeting'}
           </button>
         </div>
       </form>
@@ -5154,7 +5199,9 @@ function openMeetingModal(meeting = null) {
   document.getElementById('mTitle').focus();
 }
 
+
 async function submitMeetingForm(event) {
+
   event.preventDefault();
   const btn = document.getElementById('meetingSubmitBtn');
   const errDiv = document.getElementById('meetingFormError');
