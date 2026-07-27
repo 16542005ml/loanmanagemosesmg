@@ -106,7 +106,8 @@ app.use(express.static(path.join(__dirname, '..')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const PORT = process.env.PORT || 4000;
-const HOST = process.env.HOST || '0.0.0.0';
+// Railway injects a custom IPv6 HOST that causes EADDRNOTAVAIL in some Node versions, so we force 0.0.0.0
+const HOST = '0.0.0.0';
 
 const { sequelize } = require('./models');
 
