@@ -166,7 +166,12 @@ router.post('/meetings/create', async (req, res) => {
   try {
     const admin = requireAdmin(req, res);
     if (!admin) return;
-    const { title, meeting_date, meeting_time, location, platform, target_group, subsidiary_slug } = req.body || {};
+    const {
+      title, meeting_date, meeting_time, location, platform, target_group, subsidiary_slug,
+      meeting_type, department, status, priority, confidentiality,
+      organizer, chair, vice_chair, secretary, assistant_secretary, minute_taker,
+      purpose, description, end_time, meeting_url, agenda_items
+    } = req.body || {};
     if (!title || !meeting_date || !meeting_time) return fail(res, 400, 'Missing required meeting fields');
 
     const [result] = await sequelize.query(

@@ -28,13 +28,14 @@ let activeHomeSection     = (() => {
   return stored || 'members';
 })();
 let freshTimer      = null;
+let autoRefreshTimer      = null;  // FIX: was never declared — caused ReferenceError on every load
 let autoRefreshRunning    = false;
 let messageHubRefreshDebounceTimer = null;
 let draggedAgendaMemberId = '';
 let pointerAgendaDrag     = null;
 let suppressAgendaClick   = false;
 
-const AUTO_REFRESH_INTERVAL_MS = 5000;
+const AUTO_REFRESH_INTERVAL_MS = 10000; // FIX: was 5000ms — too aggressive, caused API flood
 
 let trackingMetrics = {
   deletedProfilesLog:    [],
@@ -108,6 +109,24 @@ function toggleAdminAlertDropdown() {
 document.addEventListener('DOMContentLoaded', async () => {
   const page = document.body.dataset.page || '';
   if (page !== 'admin-home') return;
+
+  // FIX: Guard boot — verify admin session exists before making 6+ API calls
+  const adminSession = (() => {
+    try { return JSON.parse(sessionStorage.getItem('adminSession') || 'null'); } catch (_) { return null; }
+  })();
+  // If no session, redirect to login immediately
+  if (!adminSession || !adminSession.token) {
+    // Check if disableBlurEffect was set (legacy token path)
+    if (!localStorage.getItem('disableBlurEffect')) {
+      window.location.replace('login.html');
+      return;
+    }
+  }
+  // Stamp admin display name from session
+  const adminNameEl = document.getElementById('adminDisplayName');
+  if (adminNameEl && adminSession && adminSession.name) {
+    adminNameEl.textContent = adminSession.name || 'Admin';
+  }
 
   loadCustomStylesFromStorage();
   loadSecurityPreferences();
@@ -307,16 +326,22 @@ function clearMinuteFilters() {
 
 function isUserEditingField() {
   const el = document.activeElement;
-  if (!el) return false;
+  if (!el || el === document.body) return false;
   const tag = (el.tagName || '').toLowerCase();
-  return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
+  // FIX: also block refresh if user is focused inside any modal/overlay to avoid replacing DOM mid-type
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable) return true;
+  // Check if focused element is inside an open modal
+  const insideModal = el.closest('[id$="Modal"], .modal, dialog, [class*="modal"], [class*="overlay"]');
+  return !!insideModal;
 }
 
 function hasBlockingOverlayOpen() {
-  return Array.from(document.querySelectorAll('[id$="Modal"], .modal, dialog')).some(el => {
-    if (el.id === 'deletedRecordsModal' || el.id === 'deletedMembersModal' || el.id === 'adminPassModal') return true;
+  // FIX: only block on modals that are truly blocking (fixed/overlay modals), not inline panels
+  return Array.from(document.querySelectorAll('[id$="Modal"], #adminPassModal, #meetingModal')).some(el => {
     if (el.tagName === 'DIALOG') return el.open;
-    return getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden';
+    const style = getComputedStyle(el);
+    return style.display !== 'none' && style.visibility !== 'hidden' &&
+      (style.position === 'fixed' || style.position === 'absolute');
   });
 }
 
@@ -664,8 +689,10 @@ async function handleApprovalDecision(memberId, action) {
       method: 'POST',
       body: JSON.stringify({ id: memberId, action })
     });
-    logNotification(`Verification decision: ${action === 'approve' ? 'a... Approved' : 'Ys Denied'} (Member ID: ${memberId})`);
-    pushMemberNotification(`Verification update: ${action === 'approve' ? 'approved' : 'denied'} for registration ID: ${memberId}.`);
+    // FIX: garbled emoji escape characters replaced with clean text
+    const actionLabel = action === 'approve' ? '✅ Approved' : '❌ Denied';
+    logNotification(`Verification decision: ${actionLabel} (Member ID: ${memberId})`);
+    pushMemberNotification(`Verification update: ${action === 'approve' ? 'Approved' : 'Denied'} for registration ID: ${memberId}.`);
     await loadVerificationDashboard();
   } catch (e) {
     alert(e.message || 'Unable to process approval decision.');
@@ -698,12 +725,11 @@ async function registerMember() {
     alert(`Member request submitted. Security PIN: ${pin}`);
     localStorage.setItem(SYSTEM_SYNC_KEYS.POOL_UPDATED, Date.now().toString());
     await loadVerificationDashboard();
-    document.getElementById('memberName').value     = '';
-    document.getElementById('memberEmail').value    = '';
-    document.getElementById('memberPhone').value    = '';
-    document.getElementById('memberPassword').value = '';
-    document.getElementById('memberPin').value      = '';
-    document.getElementById('memberNotes').value    = '';
+    // FIX: safely access each element — memberNotes may not exist in all HTML builds
+    ['memberName','memberEmail','memberPhone','memberPassword','memberPin','memberNotes'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
   } catch (e) {
     alert(e.message || 'Unable to submit member request.');
   }
@@ -862,7 +888,7 @@ async function checkOverdueLoans() {
     const result = await apiCall('loans/check-overdue', { method: 'POST' });
     if (result && result.flaggedCount > 0) {
       alert(`Successfully flagged ${result.flaggedCount} overdue loan(s).`);
-      await renderLoansLedger();
+      await renderLoansTableDashboard(); // FIX: was renderLoansLedger() which doesn't exist
     } else {
       alert('No overdue loans found.');
     }
@@ -2219,15 +2245,57 @@ async function loadAutomationMeetings() {
 function renderMeetingsList() {
   const container = document.getElementById('scheduledMeetingsList');
   if (!container) return;
-  container.innerHTML = scheduledMeetings.length === 0
-    ? '<div style="opacity:0.6; font-style:italic; font-size:13px;">No meetings scheduled yet.</div>'
-    : scheduledMeetings.map(m => `
-        <div style="background:rgba(0,224,255,0.06); border:1px solid rgba(0,224,255,0.15); border-radius:8px; padding:10px 14px;">
-          <strong>${m.title}</strong>
-          <span style="margin-left:10px; font-size:12px; color:#00e0ff;">[${m.platform}]</span><br>
-          <small style="opacity:0.7;">Y"... ${m.meeting_date} at ${m.meeting_time} | Group: ${m.target_group}</small>
-          ${m.location ? `<br><small style="opacity:0.6;">Y"- ${m.location}</small>` : ''}
-        </div>`).join('');
+
+  // Always show a "Schedule Meeting" button at the top
+  const headerHTML = `
+    <div style="margin-bottom:12px;">
+      <button onclick="openMeetingModal()" style="background:linear-gradient(90deg,#00e0ff,#0077ff);color:#000;border:none;border-radius:8px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;">
+        <i class="fas fa-calendar-plus"></i> Schedule New Meeting
+      </button>
+    </div>`;
+
+  if (scheduledMeetings.length === 0) {
+    container.innerHTML = headerHTML + '<div style="opacity:0.6; font-style:italic; font-size:13px;">No meetings scheduled yet.</div>';
+    return;
+  }
+
+  const statusColors = { Scheduled:'#00e0ff', 'In Progress':'#ff9800', Completed:'#4caf50', Cancelled:'#f44336' };
+  const priorityColors = { Normal:'#aaa', High:'#ff9800', Urgent:'#f44336' };
+
+  container.innerHTML = headerHTML + scheduledMeetings.map(m => {
+    const statusColor = statusColors[m.status] || '#aaa';
+    const priorityColor = priorityColors[m.priority] || '#aaa';
+    const mSafe = JSON.stringify(m).replace(/`/g, '\\`').replace(/\$/g, '\\$');
+    return `
+      <div style="background:rgba(0,224,255,0.06); border:1px solid rgba(0,224,255,0.15); border-radius:8px; padding:12px 14px; position:relative;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+          <div style="flex:1;">
+            <strong style="color:#fff;font-size:14px;">${m.title}</strong>
+            <span style="margin-left:8px;font-size:11px;color:${statusColor};background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:10px;font-weight:600;">${m.status||'Scheduled'}</span>
+            ${m.priority && m.priority !== 'Normal' ? `<span style="margin-left:4px;font-size:11px;color:${priorityColor};font-weight:700;">${m.priority}</span>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button onclick="openMeetingModal(${mSafe})" title="Edit" style="background:rgba(0,224,255,0.15);border:1px solid rgba(0,224,255,0.3);color:#00e0ff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button onclick="deleteMeeting('${m.id}', '${(m.title||'').replace(/'/g,"\\'")}')"
+              title="Delete" style="background:rgba(244,67,54,0.12);border:1px solid rgba(244,67,54,0.3);color:#f44336;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+        <div style="margin-top:6px;font-size:12px;color:#9ec;">
+          <i class="fas fa-calendar-day"></i> ${m.meeting_date} &nbsp;|&nbsp;
+          <i class="fas fa-clock"></i> ${m.meeting_time}${m.end_time ? ' — '+m.end_time : ''} &nbsp;|
+          <span style="color:#00e0ff;">[${m.platform||'In Person'}]</span>
+        </div>
+        ${m.location ? `<div style="font-size:12px;opacity:0.7;margin-top:3px;"><i class="fas fa-map-marker-alt"></i> ${m.location}</div>` : ''}
+        ${m.chair ? `<div style="font-size:12px;opacity:0.65;margin-top:3px;">Chair: ${m.chair}${m.secretary ? ' &nbsp;|&nbsp; Sec: '+m.secretary : ''}</div>` : ''}
+        ${m.purpose ? `<div style="font-size:12px;opacity:0.6;margin-top:4px;font-style:italic;">${m.purpose}</div>` : ''}
+        ${m.meeting_url ? `<div style="margin-top:6px;"><a href="${m.meeting_url}" target="_blank" style="font-size:12px;color:#0077ff;"><i class="fas fa-link"></i> Join Link</a></div>` : ''}
+      </div>`;
+  }).join('');
+
   try { updateAdminAlertDropdownCounts(); } catch (_) {}
 }
 
@@ -4925,11 +4993,224 @@ function downloadMinutesReport() {
   win.document.close();
 }
 
+// ─────────────────────────────────────────────────────────────
+//  ADMIN ACCOUNT DROPDOWN  (called from home.html onclick)
+// ─────────────────────────────────────────────────────────────
+function toggleAdminDropdown() {
+  const dd = document.getElementById('adminAccountDropdown');
+  if (!dd) return;
+  const isOpen = dd.style.display === 'block';
+  dd.style.display = isOpen ? 'none' : 'block';
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ADMIN LOGOUT  (FIX: was clearing wrong keys; sessions persisted)
+// ─────────────────────────────────────────────────────────────
 function adminLogout() {
-    if (!confirm('Are you sure you want to logout?')) return;
-    sessionStorage.clear();
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('homeSessionTimedOut');
-    window.location.href = 'login.html';
+  if (!confirm('Are you sure you want to sign out?')) return;
+  // Stop auto-refresh to prevent further API calls
+  if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+  // Clear the admin session (set by login.js on successful login)
+  try { sessionStorage.removeItem('adminSession'); } catch (_) {}
+  try { sessionStorage.clear(); } catch (_) {}
+  // Clear all localStorage admin keys
+  ['adminToken', 'disableBlurEffect', 'activeHomeSection',
+   'adminUser', 'railway_backend_url'].forEach(k => {
+    try { localStorage.removeItem(k); } catch (_) {}
+  });
+  // Redirect to login
+  window.location.replace('login.html');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MEETING MANAGEMENT  — Create / Edit / Delete
+//  Connects to existing backend: /api/automation/meetings/*
+// ─────────────────────────────────────────────────────────────
+let _editingMeetingId = null;
+
+function openMeetingModal(meeting = null) {
+  _editingMeetingId = meeting ? meeting.id : null;
+  const existing = document.getElementById('meetingModal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'meetingModal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:200000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto;';
+
+  const today = new Date().toISOString().split('T')[0];
+  const m = meeting || {};
+
+  overlay.innerHTML = `
+    <div style="background:#111b2f;border:1px solid rgba(0,224,255,0.3);border-radius:12px;width:min(640px,96vw);max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;">
+        <h3 style="margin:0;color:#00e0ff;font-size:18px;">${meeting ? '✏️ Edit Meeting' : '📅 Schedule New Meeting'}</h3>
+        <button onclick="document.getElementById('meetingModal').remove()" style="background:none;border:none;color:#aaa;font-size:22px;cursor:pointer;">✕</button>
+      </div>
+      <form id="meetingForm" onsubmit="submitMeetingForm(event)" style="display:grid;gap:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Meeting Title *</label>
+            <input id="mTitle" required placeholder="e.g. Monthly Board Meeting" value="${m.title||''}"
+              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Meeting Type</label>
+            <select id="mType" style="width:100%;box-sizing:border-box;padding:10px;background:#111b2f;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+              ${['Board','General','Emergency','Finance','Special'].map(t=>`<option value="${t}" ${(m.meeting_type||'Board')===t?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Date *</label>
+            <input id="mDate" type="date" required value="${m.meeting_date||today}"
+              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Start Time *</label>
+            <input id="mTime" type="time" required value="${m.meeting_time||''}"
+              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">End Time</label>
+            <input id="mEndTime" type="time" value="${m.end_time||''}"
+              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Location / Venue</label>
+            <input id="mLocation" placeholder="e.g. Boardroom A" value="${m.location||''}"
+              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Platform / Mode</label>
+            <select id="mPlatform" style="width:100%;box-sizing:border-box;padding:10px;background:#111b2f;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+              ${['In Person','Virtual','Hybrid','Email Engine'].map(p=>`<option value="${p}" ${(m.platform||'In Person')===p?'selected':''}>${p}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Chairperson</label>
+            <input id="mChair" placeholder="Name of chairperson" value="${m.chair||''}"
+              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Secretary</label>
+            <input id="mSecretary" placeholder="Name of secretary" value="${m.secretary||''}"
+              style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Meeting URL / Link</label>
+          <input id="mUrl" type="url" placeholder="https://meet.google.com/..." value="${m.meeting_url||''}"
+            style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+        </div>
+        <div>
+          <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Purpose / Description</label>
+          <textarea id="mPurpose" rows="2" placeholder="Brief description of meeting purpose..."
+            style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;resize:vertical;">${m.purpose||''}</textarea>
+        </div>
+        <div>
+          <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Agenda Items</label>
+          <textarea id="mAgenda" rows="3" placeholder="1. Approval of previous minutes&#10;2. Financial report&#10;3. AOB"
+            style="width:100%;box-sizing:border-box;padding:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;resize:vertical;">${m.agenda_items||''}</textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Priority</label>
+            <select id="mPriority" style="width:100%;box-sizing:border-box;padding:10px;background:#111b2f;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+              ${['Normal','High','Urgent'].map(p=>`<option value="${p}" ${(m.priority||'Normal')===p?'selected':''}>${p}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Status</label>
+            <select id="mStatus" style="width:100%;box-sizing:border-box;padding:10px;background:#111b2f;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+              ${['Scheduled','In Progress','Completed','Cancelled'].map(s=>`<option value="${s}" ${(m.status||'Scheduled')===s?'selected':''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Target Group</label>
+            <select id="mTarget" style="width:100%;box-sizing:border-box;padding:10px;background:#111b2f;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;">
+              ${['all','board','members','finance','special'].map(g=>`<option value="${g}" ${(m.target_group||'all')===g?'selected':''}>${g.charAt(0).toUpperCase()+g.slice(1)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div id="meetingFormError" style="display:none;color:#ff8a80;font-size:12px;padding:6px 10px;background:rgba(244,67,54,0.1);border-radius:6px;"></div>
+        <div style="display:flex;gap:10px;margin-top:4px;">
+          <button type="button" onclick="document.getElementById('meetingModal').remove()"
+            style="flex:1;padding:11px;background:#333;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Cancel</button>
+          <button type="submit" id="meetingSubmitBtn"
+            style="flex:2;padding:11px;background:linear-gradient(90deg,#00e0ff,#0077ff);color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:14px;">
+            ${meeting ? 'Save Changes' : '📅 Schedule Meeting'}
+          </button>
+        </div>
+      </form>
+    </div>`;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  document.getElementById('mTitle').focus();
+}
+
+async function submitMeetingForm(event) {
+  event.preventDefault();
+  const btn = document.getElementById('meetingSubmitBtn');
+  const errDiv = document.getElementById('meetingFormError');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+  errDiv.style.display = 'none';
+
+  const payload = {
+    title:        document.getElementById('mTitle').value.trim(),
+    meeting_date: document.getElementById('mDate').value,
+    meeting_time: document.getElementById('mTime').value,
+    end_time:     document.getElementById('mEndTime').value || null,
+    location:     document.getElementById('mLocation').value.trim(),
+    platform:     document.getElementById('mPlatform').value,
+    meeting_type: document.getElementById('mType').value,
+    chair:        document.getElementById('mChair').value.trim(),
+    secretary:    document.getElementById('mSecretary').value.trim(),
+    meeting_url:  document.getElementById('mUrl').value.trim(),
+    purpose:      document.getElementById('mPurpose').value.trim(),
+    agenda_items: document.getElementById('mAgenda').value.trim(),
+    priority:     document.getElementById('mPriority').value,
+    status:       document.getElementById('mStatus').value,
+    target_group: document.getElementById('mTarget').value,
+    subsidiary_slug: 'eldoret_main'
+  };
+
+  try {
+    if (_editingMeetingId) {
+      await apiCall(`automation/meetings/${_editingMeetingId}`, { method: 'PUT', body: JSON.stringify(payload) });
+      logNotification(`✏️ Meeting updated: <strong>${payload.title}</strong> on ${payload.meeting_date}`);
+    } else {
+      await apiCall('automation/meetings/create', { method: 'POST', body: JSON.stringify(payload) });
+      logNotification(`📅 Meeting scheduled: <strong>${payload.title}</strong> on ${payload.meeting_date} at ${payload.meeting_time}`);
+      // Broadcast to members
+      await broadcastAdminMessage(
+        `Upcoming Meeting: ${payload.title}`,
+        `Date: ${payload.meeting_date} | Time: ${payload.meeting_time}\nVenue: ${payload.location || 'TBA'}\nPurpose: ${payload.purpose || 'See agenda'}`,
+        payload.target_group
+      ).catch(() => {});
+    }
+    document.getElementById('meetingModal').remove();
+    await loadAutomationMeetings();
+  } catch (e) {
+    errDiv.textContent = e.message || 'Failed to save meeting. Please try again.';
+    errDiv.style.display = 'block';
+    if (btn) { btn.disabled = false; btn.textContent = _editingMeetingId ? 'Save Changes' : '📅 Schedule Meeting'; }
+  }
+}
+
+async function deleteMeeting(id, title) {
+  if (!confirm(`Delete meeting "${title}"? This cannot be undone.`)) return;
+  try {
+    await apiCall(`automation/meetings/${id}`, { method: 'DELETE' });
+    logNotification(`🗑️ Meeting deleted: ${title}`);
+    await loadAutomationMeetings();
+  } catch (e) {
+    alert('Failed to delete meeting: ' + (e.message || 'Unknown error'));
+  }
 }
 

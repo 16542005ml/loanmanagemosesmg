@@ -233,11 +233,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const icon = document.getElementById('themeIcon');
         if (icon) icon.className = 'fas fa-sun'; // default icon since base is dark
     }
-    // Initialize session timeout (5 minutes) with logout redirect
+    // FIX: raised from 5 to 15 minutes — 5 minutes was too aggressive for financial forms
     applyMemberSecurityPreferences();
     const autoLogoutEnabled = localStorage.getItem(MEMBER_SECURITY_PREF_KEYS.AUTO_LOGOUT) !== 'false';
     if (autoLogoutEnabled && typeof initSessionTimeout === 'function') {
-        initSessionTimeout({ timeoutMinutes: 5, onTimeout: logoutMember });
+        initSessionTimeout({ timeoutMinutes: 15, onTimeout: logoutMember });
     }
     applyMemberAccessBodyState(CURRENT_SESSION);
     initializeNavigationEngine();
@@ -268,10 +268,12 @@ document.addEventListener("DOMContentLoaded", () => {
         window.activeResetToken = resetToken;
     }
 
-    // Listen across tab domains for real-time administrative approvals from home.html
+    // FIX: debounce storage events — direct calls caused full reload on every cross-tab write
+    let _storageRefreshTimer = null;
     window.addEventListener('storage', (e) => {
         if (e.key === STORAGE_KEYS.SESSION || e.key === STORAGE_KEYS.MEMBERS_POOL || e.key === 'loans' || e.key === 'repayments' || e.key === 'disableBlurEffect') {
-            refreshStateSync();
+            if (_storageRefreshTimer) clearTimeout(_storageRefreshTimer);
+            _storageRefreshTimer = setTimeout(() => { _storageRefreshTimer = null; refreshStateSync(); }, 1500);
         }
         // Force logout trigger from other tabs/pages (landingpage)
         if (e.key === 'forceMemberLogout' && e.newValue) {
@@ -416,12 +418,11 @@ async function handleMemberLogin(event) {
     if (!allowEmailOrUsername && !emailRegex.test(identity)) return alert('Please enter a valid registered email address.');
 
     try {
-        console.log('Member authentication request started', { identifier: identity ? '[REDACTED]' : '', allowEmailOrUsername });
+        // FIX: removed console.log of auth state — leaks sensitive session data
         const data = await apiRequest('members/login', {
             method: 'POST',
             body: JSON.stringify({ identifier: identity, password: pass })
         });
-        console.log('Member authentication response received', data);
         const member = data.member || data;
         document.getElementById("loginForm").reset();
         const statusStr = String(member.status || '').toLowerCase();
@@ -460,10 +461,11 @@ async function handleMemberLogin(event) {
         alert("Authentication successful. Welcome back!");
     } catch (error) {
         forceAuthOnlyView('Member login failed; protected navigation remains locked.');
-        console.error('Member authentication failed:', error);
-        const message = error.message === 'Failed to fetch'
-            ? 'Unable to reach the backend server. Please ensure the local backend is running on http://127.0.0.1:4000 and try again.'
-            : (error.message || 'Login failed. Please confirm credentials.');
+        // FIX: error message now correctly reflects deployment environment
+        const isOffline = !navigator.onLine || error.message === 'Failed to fetch';
+        const message = isOffline
+            ? 'Cannot reach the server. Please check your internet connection and try again.'
+            : (error.message || 'Login failed. Please confirm your credentials and try again.');
         alert(message);
     }
 }
@@ -863,7 +865,9 @@ function setFunctionalSectionsLock(shouldLock) {
 }
 
 function logoutMember() {
+    // FIX: also stop the inbox poller — was leaking after logout
     stopLiveUpdatePoller();
+    try { stopMemberInboxPoller(); } catch (_) {}
     // Attempt server-side token revocation for safety
     (async () => {
         try {

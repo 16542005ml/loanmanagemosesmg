@@ -212,9 +212,9 @@ async function startServer() {
   // Routes
   app.use('/api', require('./routes/api'));
 
-  // Serve landing page as index
+  // Serve landing page as index (entry point for all visitors)
   app.get('/', (req, res) => {
-    res.redirect('/member.html');
+    res.redirect('/landingpage.html');
   });
 
   app.use((req, res) => {
