@@ -1921,10 +1921,11 @@
     window.addEventListener("DOMContentLoaded", async () => {
         // 1. Check homeSessionTimedOut flag (set when admin idle timer fires)
         if (sessionStorage.getItem('homeSessionTimedOut') === 'true') {
+            // Session timed out - show blur gate instead of redirecting
             sessionStorage.removeItem('homeSessionTimedOut');
             sessionStorage.removeItem('adminSession');
             localStorage.removeItem('disableBlurEffect');
-            window.location.replace('login.html');
+            applyBlurState(true);
             return;
         }
 

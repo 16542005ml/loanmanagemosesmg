@@ -207,20 +207,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   scaleMainContent();
   startHomeAutoRefresh();
 
-  // ── Admin session timeout: 20 minutes of inactivity → logout ──
+  // ── Admin session timeout: 20 minutes of inactivity → show blur gate ──
   if (typeof initSessionTimeout === 'function') {
     initSessionTimeout({
       timeoutMinutes: 20,
       onTimeout: () => {
-        // Signal blur gate to redirect on next load
+        // Signal blur gate to show locked screen
         sessionStorage.setItem('homeSessionTimedOut', 'true');
         // Stop refresh to prevent further API calls
         if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
-        // Clear session
+        // Clear session but keep blur gate to show
         try { sessionStorage.removeItem('adminSession'); } catch (_) {}
         try { localStorage.removeItem('disableBlurEffect'); } catch (_) {}
-        // Redirect immediately
-        window.location.replace('login.html');
+        // Show blur gate instead of redirecting
+        if (typeof applyBlurState === 'function') {
+          applyBlurState(true);
+        }
       }
     });
   }
