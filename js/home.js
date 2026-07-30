@@ -216,9 +216,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         sessionStorage.setItem('homeSessionTimedOut', 'true');
         // Stop refresh to prevent further API calls
         if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
-        // Clear session but keep blur gate to show
-        try { sessionStorage.removeItem('adminSession'); } catch (_) {}
-        try { localStorage.removeItem('disableBlurEffect'); } catch (_) {}
+        // Keep session for blur gate unlock, but mark as timed out
+        try { localStorage.removeItem('adminDisableBlurEffect'); } catch (_) {}
         // Show blur gate instead of redirecting
         if (typeof applyBlurState === 'function') {
           applyBlurState(true);

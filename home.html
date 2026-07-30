@@ -1826,16 +1826,22 @@
                  body: JSON.stringify({ password: pass, blurEnabled: newState })
              });
              const data = await res.json();
-             if (data.status === 'success') {
-                 alert(data.blurEnabled ? "Screen blur blocked successfully." : "Screen blur unblocked successfully.");
-                 document.body.removeChild(overlay);
-                 if (!data.blurEnabled) sessionStorage.removeItem('homeSessionTimedOut');
-                 if (data.blurEnabled) sessionStorage.setItem('homeSessionTimedOut', 'true');
-                 applyBlurState(data.blurEnabled);
-             } else {
-                 alert("Error: " + data.message);
-                 btnOk.innerText = "Confirm";
-             }
+            if (data.status === 'success') {
+                alert(data.blurEnabled ? "Screen blur blocked successfully." : "Screen blur unblocked successfully.");
+                document.body.removeChild(overlay);
+                if (!data.blurEnabled) {
+                    sessionStorage.removeItem('homeSessionTimedOut');
+                    localStorage.setItem('adminDisableBlurEffect', 'true');
+                }
+                if (data.blurEnabled) {
+                    sessionStorage.setItem('homeSessionTimedOut', 'true');
+                    localStorage.removeItem('adminDisableBlurEffect');
+                }
+                applyBlurState(data.blurEnabled);
+            } else {
+                alert("Error: " + data.message);
+                btnOk.innerText = "Confirm";
+            }
          } catch(e) {
              alert("Server error.");
              btnOk.innerText = "Confirm";
@@ -1903,10 +1909,9 @@
     window.addEventListener("DOMContentLoaded", async () => {
         // 1. Check homeSessionTimedOut flag (set when admin idle timer fires)
         if (sessionStorage.getItem('homeSessionTimedOut') === 'true') {
-            // Session timed out - show blur gate instead of redirecting
+            // Session timed out - show blur gate, keep session for unlock
             sessionStorage.removeItem('homeSessionTimedOut');
-            sessionStorage.removeItem('adminSession');
-            localStorage.removeItem('disableBlurEffect');
+            localStorage.removeItem('adminDisableBlurEffect');
             applyBlurState(true);
             return;
         }
@@ -1920,7 +1925,7 @@
         if (!adminSession || !adminSession.token || sessionAge > SESSION_MAX_AGE_MS) {
             // No valid session — clear everything and send to login
             sessionStorage.removeItem('adminSession');
-            localStorage.removeItem('disableBlurEffect');
+            localStorage.removeItem('adminDisableBlurEffect');
             window.location.replace('login.html');
             return;
         }
@@ -1930,7 +1935,7 @@
         window.addEventListener('popstate', () => {
             sessionStorage.removeItem('adminSession');
             sessionStorage.removeItem('homeSessionTimedOut');
-            localStorage.removeItem('disableBlurEffect');
+            localStorage.removeItem('adminDisableBlurEffect');
             window.location.replace('login.html');
         });
 
