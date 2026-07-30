@@ -122,7 +122,8 @@ app.get('/api/health', async (req, res) => {
     host: sequelize.connectionDetails.host,
     database: sequelize.connectionDetails.database,
     adminTest: null,
-    tables: null
+    tables: null,
+    realHostname: null
   };
   try {
     await sequelize.authenticate();
@@ -133,6 +134,8 @@ app.get('/api/health', async (req, res) => {
     health.adminTest = users;
     const [tables] = await sequelize.query("SHOW TABLES");
     health.tables = tables.map(t => Object.values(t)[0]);
+    const [host] = await sequelize.query("SELECT @@hostname AS h");
+    health.realHostname = host[0].h;
   } catch (err) {
     health.db = 'error: ' + err.message;
     health.ok = false;
