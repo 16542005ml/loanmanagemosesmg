@@ -119,7 +119,9 @@ app.get('/api/health', async (req, res) => {
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     memory: process.memoryUsage(),
-    db: 'disconnected'
+    db: 'disconnected',
+    host: sequelize.connectionDetails.host,
+    database: sequelize.connectionDetails.database
   };
   try {
     await sequelize.authenticate();
