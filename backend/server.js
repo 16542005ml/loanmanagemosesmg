@@ -285,6 +285,14 @@ async function startServer() {
   } catch (schedulerErr) {
     console.warn('[server] Email scheduler failed to start:', schedulerErr.message);
   }
+
+  // Start loan reminder scheduler
+  try {
+    const { startLoanSchedulers } = require('./schedulers/loanReminderScheduler');
+    startLoanSchedulers();
+  } catch (schedulerErr) {
+    console.warn('[server] Loan reminder scheduler failed to start:', schedulerErr.message);
+  }
 }
 
 // --- Graceful Shutdown ---

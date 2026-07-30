@@ -7,7 +7,7 @@ const { getAdminFromRequest, getMemberFromRequest, requireAdmin, getFallbackAdmi
 const { signMemberToken } = require('../adminContext');
 const { Op } = require('sequelize');
 const { memberCreateRules } = require('../validation');
-const { sendEmail, emailTemplates, getAdminFrom } = require('../emailService');
+const { sendEmail, templates } = require('../services/emailService');
 const { sendSMS, smsTemplates } = require('../smsService');
 
 const router = express.Router();
@@ -257,12 +257,17 @@ router.post('/create', memberCreateRules, async (req, res) => {
 
     // Send registration received email & SMS
     try {
-      const [subject, html] = emailTemplates.newRegistration({
-        memberName: full_name,
-        email: normalizedEmail
+      const html = templates.newMemberRegistration({
+        name: full_name,
+        email: normalizedEmail,
+        phone: phone || 'Not provided',
+        date: new Date().toLocaleDateString()
       });
-      // Send directly without adminFrom since they aren't assigned to an admin yet
-      sendEmail(normalizedEmail, subject, html).catch(() => {});
+      sendEmail({
+        to: normalizedEmail,
+        subject: 'Registration Received - Loan Management System',
+        html
+      }).catch(() => {});
 
       if (phone) {
         sendSMS(phone, smsTemplates.newRegistration({ memberName: full_name })).catch(() => {});
@@ -563,14 +568,19 @@ router.post('/process-approval', async (req, res) => {
       pendingMember.admin_id = admin.id;
       await pendingMember.save();
 
-      // Send login credentials email to newly approved member
+      // Send approval email to newly approved member
       if (pendingMember.email) {
-        const [subject, html] = emailTemplates.loginCredentials({
-          memberName: pendingMember.full_name,
-          email:      pendingMember.email,
-          loginUrl:   'http://localhost:3000/login.html' // Update this if domain changes
+        const html = templates.memberApproved({
+          name: pendingMember.full_name,
+          email: pendingMember.email,
+          approvedBy: admin.full_name || admin.name || 'System Admin',
+          date: new Date().toLocaleDateString()
         });
-        sendEmail(pendingMember.email, subject, html, null, getAdminFrom(admin)).catch(() => {});
+        sendEmail({
+          to: pendingMember.email,
+          subject: 'Membership Approved - Loan Management System',
+          html
+        }).catch(() => {});
       }
       if (pendingMember.phone) {
         sendSMS(pendingMember.phone, smsTemplates.memberApproved({ 

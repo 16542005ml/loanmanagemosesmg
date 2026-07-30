@@ -4,7 +4,7 @@ const { sequelize } = require('../models');
 const bcrypt = require('bcryptjs');
 const { signAdminToken } = require('../adminContext');
 const { registerRules, loginRules } = require('../validation');
-const { sendEmail, emailTemplates } = require('../emailService');
+const { sendEmail, templates } = require('../services/emailService');
 
 (async () => {
     try {
@@ -219,7 +219,24 @@ router.post('/forgot-password', async (req, res) => {
             { replacements: { email, token } }
         );
 
-        return res.json({ status: 'success', message: 'If an account exists with that email, a reset link has been generated.', token });
+        // Send password reset email
+        try {
+            const resetLink = `${process.env.FRONTEND_URL || 'https://mosesmg255-jpg.github.io/new-lm-pages'}/login.html?reset=${token}`;
+            const html = templates.passwordReset({
+                name: 'Admin',
+                resetLink,
+                expiryMinutes: 60
+            });
+            await sendEmail({
+                to: email,
+                subject: 'Password Reset Request - Loan Management System',
+                html
+            });
+        } catch (emailErr) {
+            console.warn('[auth/forgot-password] Could not send reset email:', emailErr.message);
+        }
+
+        return res.json({ status: 'success', message: 'If an account exists with that email, a reset link has been sent.', token });
     } catch (e) {
         console.error(e);
         return res.json({ status: 'error', message: 'System error' });

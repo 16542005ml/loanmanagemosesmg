@@ -4,6 +4,7 @@ const { Contribution, Member, sequelize } = require('../models');
 const { getAdminFromRequest, requireAdmin, getFallbackAdminId, getMemberFromRequest } = require('../adminContext');
 const { contributionCreateRules } = require('../validation');
 const { upload, handleUploadError } = require('../uploadValidation');
+const { sendEmail, templates } = require('../services/emailService');
 
 const router = express.Router();
 
@@ -67,6 +68,30 @@ router.post('/create', upload.single('receipt'), contributionCreateRules, handle
       payment_method: payment_method || 'Not specified',
       receipt_url
     });
+
+    // Send contribution receipt email
+    try {
+      const memberEmail = memberRecord?.email || approved?.email;
+      const memberName = memberRecord?.full_name || memberRecord?.name || approved?.full_name || 'Member';
+      if (memberEmail) {
+        const receiptNumber = `CNT-${new Date().toISOString().slice(0,10).replace(/-/g, '')}-${String(contribution.id).padStart(3, '0')}`;
+        const html = templates.contributionReceipt({
+          name: memberName,
+          receiptNumber,
+          amount: Number(amount),
+          paymentMethod: payment_method || 'Not specified',
+          date: new Date().toLocaleDateString(),
+          status: 'Confirmed'
+        });
+        sendEmail({
+          to: memberEmail,
+          subject: 'Contribution Receipt - Loan Management System',
+          html
+        }).catch(() => {});
+      }
+    } catch (emailErr) {
+      console.warn('[contributions/create] Could not send contribution receipt email:', emailErr.message);
+    }
 
     return ok(res, contribution);
   } catch (err) {

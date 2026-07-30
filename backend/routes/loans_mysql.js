@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const { Loan, Member, sequelize } = require('../models');
 const { getAdminFromRequest, requireAdmin, getMemberFromRequest, getFallbackAdminId } = require('../adminContext');
 const { loanCreateRules } = require('../validation');
-const { sendEmail, emailTemplates, getAdminFrom } = require('../emailService');
+const { sendEmail, templates } = require('../services/emailService');
 const { sendSMS, smsTemplates } = require('../smsService');
 
 const router = express.Router();
@@ -195,15 +195,23 @@ router.post('/create', loanCreateRules, async (req, res) => {
           ).catch(() => [[]]);
           if (adminRow) adminObj = adminRow;
         }
-        const [subject, html] = emailTemplates.loanCreated({
-          memberName:   memberFullName || borrowerNameClean || 'Member',
-          amount:       Number(amount),
-          duration:     duration || 0,
+        const principalAmount = Number(amount);
+        const totalOwed = principalAmount + (principalAmount * (interest_rate || 0) / 100);
+        const html = templates.loanCreated({
+          name: memberFullName || borrowerNameClean || 'Member',
+          loanId: loan.id,
+          principalAmount,
           interestRate: interest_rate || 0,
-          dueDate:      dueDate,
-          loanId:       loan.id
+          totalOwed,
+          duration: duration || 0,
+          dueDate: dueDate || 'Not set',
+          status: 'Active'
         });
-        sendEmail(memberEmail, subject, html, null, getAdminFrom(adminObj)).catch(() => {});
+        sendEmail({
+          to: memberEmail,
+          subject: 'Loan Application Confirmed - Loan Management System',
+          html
+        }).catch(() => {});
       }
       
       const memberPhone = memberRows && memberRows[0] && memberRows[0].phone;
