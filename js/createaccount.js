@@ -48,7 +48,13 @@ document.querySelector('form').addEventListener('submit', async (e) => {
             body: JSON.stringify({ adminName: name, adminEmail: email, adminPhone: phone || '', adminPassword: password, adminConfirm: confirm })
         });
 
-        const result = await response.json();
+        let result;
+        try {
+            result = await response.json();
+        } catch (_parseErr) {
+            throw new Error('Server is temporarily unavailable. Please wait a moment and try again.');
+        }
+
         if (result.redirect) {
             window.location.href = result.redirect;
         } else if (result.success) {
@@ -63,7 +69,7 @@ document.querySelector('form').addEventListener('submit', async (e) => {
         }
     } catch (err) {
         console.error('Registration failed:', err);
-        alert('Network error. Please try again.');
+        alert(err.message || 'Network error. Please try again.');
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.innerText = 'Create Account';

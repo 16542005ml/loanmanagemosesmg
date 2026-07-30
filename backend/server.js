@@ -178,12 +178,40 @@ function getPreferredIP() {
 
 let server;
 
+// --- API Routes (always registered BEFORE DB connects to avoid cold-start HTML errors) ---
+app.use('/api', require('./routes/api'));
+
+// Serve landing page as index
+app.get('/', (req, res) => {
+  res.redirect('/landingpage.html');
+});
+
+// Catch-all 404 — always returns JSON, never HTML
+app.use((req, res) => {
+  res.status(404).json({ status: 'fail', message: 'Not found' });
+});
+
 async function startServer() {
   const dbInfo = sequelize.connectionDetails || {};
   let dbConnected = false;
   console.log(
     `MySQL target: ${dbInfo.user || 'root'}@${dbInfo.host || '127.0.0.1'}:${dbInfo.port || 3306}/${dbInfo.database || 'loanmanagement'}`
   );
+
+  // Start the HTTP server immediately so Render's health check passes during DB connect
+  server = app.listen(PORT, HOST, () => {
+    const localHost = HOST === '127.0.0.1' || HOST === 'localhost' || HOST === '0.0.0.0' || HOST === '::' ? 'localhost' : HOST;
+    console.log(`\nLM backend listening on port ${PORT}`);
+    console.log(`Static files served from: ${path.join(__dirname, '..')}\n`);
+    console.log('--- Available Localhost URLs ---');
+    console.log(`  http://${localHost}:${PORT}/home.html          (Admin Panel)`);
+    console.log(`  http://${localHost}:${PORT}/member.html        (Member Portal)`);
+    console.log(`  http://${localHost}:${PORT}/login.html         (Admin Login)`);
+    console.log(`  http://${localHost}:${PORT}/landingpage.html   (Landing Page)`);
+    console.log(`  http://${localHost}:${PORT}/createaccount.html (Create Account)`);
+    console.log(`  http://${localHost}:${PORT}/api/health          (Health Check)`);
+    console.log(`--------------------------------\n`);
+  });
 
   for (let i = 1; i <= 5; i++) {
     try {
@@ -211,9 +239,6 @@ async function startServer() {
     }
   }
 
-  // Routes
-  app.use('/api', require('./routes/api'));
-
   // Start email scheduler (daily repayment reminders, overdue alerts)
   try {
     const { startEmailScheduler } = require('./emailScheduler');
@@ -221,29 +246,6 @@ async function startServer() {
   } catch (schedulerErr) {
     console.warn('[server] Email scheduler failed to start:', schedulerErr.message);
   }
-
-  // Serve landing page as index (entry point for all visitors)
-  app.get('/', (req, res) => {
-    res.redirect('/landingpage.html');
-  });
-
-  app.use((req, res) => {
-    res.status(404).json({ status: 'fail', message: 'Not found' });
-  });
-
-  server = app.listen(PORT, HOST, () => {
-    const localHost = HOST === '127.0.0.1' || HOST === 'localhost' || HOST === '0.0.0.0' || HOST === '::' ? 'localhost' : HOST;
-    console.log(`\nLM backend listening on port ${PORT}`);
-    console.log(`Static files served from: ${path.join(__dirname, '..')}\n`);
-    console.log('--- Available Localhost URLs ---');
-    console.log(`  http://${localHost}:${PORT}/home.html          (Admin Panel)`);
-    console.log(`  http://${localHost}:${PORT}/member.html        (Member Portal)`);
-    console.log(`  http://${localHost}:${PORT}/login.html         (Admin Login)`);
-    console.log(`  http://${localHost}:${PORT}/landingpage.html   (Landing Page)`);
-    console.log(`  http://${localHost}:${PORT}/createaccount.html (Create Account)`);
-    console.log(`  http://${localHost}:${PORT}/api/health          (Health Check)`);
-    console.log(`--------------------------------\n`);
-  });
 }
 
 // --- Graceful Shutdown ---

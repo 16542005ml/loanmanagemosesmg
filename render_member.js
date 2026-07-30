@@ -1,4 +1,3 @@
-window.__API_BASE__ = 'https://new-lm-pages.onrender.com/api';
 /**
  * ==========================================================================
  * DATA STRUCTURE INITIALIZER MATRIX & STATE STORAGE
@@ -1041,8 +1040,6 @@ async function apiRequest(path, options = {}) {
         ...options
     });
 
-    // Safely parse JSON — if the server returns HTML (e.g., during cold start), this will throw
-    // a friendly error instead of the raw "Unexpected token '<'" parse error
     let data;
     try {
         data = await response.json();
@@ -2768,64 +2765,6 @@ async function loadUnreadCount() {
     }
 }
 
-async function markMeetingInviteRead(messageId) {
-    try {
-        await apiRequest('messages/member-mark-read', { method: 'POST', body: JSON.stringify({ ids: [messageId] }) });
-        loadMessagesInbox({ showLoading: false, forceReload: true });
-    } catch (e) {
-        console.warn('Failed to mark read', e);
-    }
-}
-
-function renderMeetingActivity(invites) {
-    const container = document.getElementById('meetingActivityContainer');
-    if (!container) return;
-
-    if (!invites.length) {
-        container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px; opacity: 0.6;"><i class="fas fa-calendar-times" style="font-size: 24px; margin-bottom: 10px;"></i><p>No meeting invitations found.</p></div>';
-        return;
-    }
-
-    container.innerHTML = invites.map(m => {
-        const md = m.meeting_data || {};
-        const isUnread = !m.is_read;
-        const dateStr = m.created_at ? new Date(m.created_at).toLocaleString() : '';
-        return `
-            <div style="background: rgba(0,0,0,0.25); border: 1px solid ${isUnread ? 'rgba(0,224,255,0.4)' : 'rgba(255,255,255,0.1)'}; border-radius: 12px; padding: 16px; position: relative; display: flex; flex-direction: column; gap: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
-                    <div>
-                        <h3 style="font-size: 1.1rem; color: ${isUnread ? '#00e0ff' : '#a3dafe'}; font-weight: 700; margin: 0 0 4px 0;">
-                            ${isUnread ? '<span style="display:inline-block; width:8px; height:8px; background:#00e0ff; border-radius:50%; margin-right:6px;"></span>' : ''}${escHtml(md.title || 'Meeting Invitation')}
-                        </h3>
-                        <div style="font-size: 11px; opacity: 0.7;">Received: ${dateStr}</div>
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; color: #e0f7ff; margin-bottom: 4px;">
-                    <div style="display:flex; flex-direction:column;"><span style="font-size:11px; opacity:0.6; text-transform:uppercase;">Date &amp; Time</span><span>${escHtml(md.date)} at ${escHtml(md.time)}</span></div>
-                    <div style="display:flex; flex-direction:column;"><span style="font-size:11px; opacity:0.6; text-transform:uppercase;">Venue</span><span>${escHtml(md.venue)}</span></div>
-                    <div style="display:flex; flex-direction:column;"><span style="font-size:11px; opacity:0.6; text-transform:uppercase;">Committee</span><span>${escHtml(md.committee)}</span></div>
-                    <div style="display:flex; flex-direction:column;"><span style="font-size:11px; opacity:0.6; text-transform:uppercase;">Organizer</span><span>${escHtml(md.organizer)}</span></div>
-                </div>
-                
-                <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; font-size:12px; color:#cfd8fc; border-left:3px solid #00e0ff; margin-bottom: 4px;">
-                    <span style="display:block; font-size:10px; opacity:0.7; text-transform:uppercase; margin-bottom:4px;">Administrator Message</span>
-                    ${m.subject ? escHtml(m.subject) : 'No additional message.'}
-                </div>
-
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
-                    <button class="action-btn" onclick="window.location.href='meeting-center.html?join=${md.meeting_id}'" style="font-size: 12px; padding: 6px 12px; background: linear-gradient(90deg, #00e0ff, #0077ff); color: #000; border: none; font-weight: bold;">
-                        <i class="fas fa-link"></i> Join Meeting
-                    </button>
-                    ${isUnread ? `<button class="action-btn" onclick="markMeetingInviteRead('${m.id}')" style="font-size: 12px; padding: 6px 12px;"><i class="fas fa-eye"></i> Mark as Read</button>` : ''}
-                    <button class="btn-del" onclick="deleteMemberMessageForMe('${m.id}')" style="font-size: 12px; padding: 6px 12px;"><i class="fas fa-trash"></i> Delete</button>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-
 async function handleCheckinUnreadClick() {
     if (!CURRENT_SESSION || !CURRENT_SESSION.id) return;
     try {
@@ -3014,58 +2953,22 @@ async function loadMessagesInbox({ showLoading = true, forceReload = false } = {
 
     try {
         const data = await apiRequest('messages/member-inbox/' + CURRENT_SESSION.id, { method: 'GET' });
-        const allMessages = Array.isArray(data) ? data : (data.data || []);
-        
-        const standardMessages = [];
-        const meetingInvites = [];
-        let unreadStandard = 0;
-        let unreadMeetings = 0;
-        
-        for (const m of allMessages) {
-            let isMeetingInvite = false;
-            if (m.body && m.body.startsWith('{') && m.body.includes('"type":"meeting_invite"')) {
-                try {
-                    const parsed = JSON.parse(m.body);
-                    if (parsed.type === "meeting_invite") {
-                        m.meeting_data = parsed;
-                        meetingInvites.push(m);
-                        if (!m.is_read && m.sender_role === 'admin') unreadMeetings++;
-                        isMeetingInvite = true;
-                    }
-                } catch(e) {}
-            }
-            if (!isMeetingInvite) {
-                standardMessages.push(m);
-                if (!m.is_read && m.sender_role === 'admin') unreadStandard++;
-            }
-        }
-        
-        // Update badges dynamically based on actual inbox data
-        const meetingBadge = document.getElementById('navMeetingBadge');
-        if (meetingBadge) {
-            meetingBadge.textContent = unreadMeetings;
-            meetingBadge.style.display = unreadMeetings > 0 ? 'inline' : 'none';
-        }
-        
-        const msgBadge = document.getElementById('navMsgBadge');
-        if (msgBadge) {
-            msgBadge.textContent = unreadStandard;
-            msgBadge.style.display = unreadStandard > 0 ? 'inline' : 'none';
-        }
-        
-        const payloadHash = computeMessageHash(allMessages);
+        const messages = Array.isArray(data) ? data : (data.data || []);
+        const payloadHash = computeMessageHash(messages);
         const shouldUpdate = forceReload || payloadHash !== MEMBER_MESSAGE_STATE.lastPayloadHash || showLoading;
 
-        if (shouldUpdate) {
-            if (!standardMessages.length) {
-                listEl.innerHTML = '<div class="messages-empty-state"><i class="fas fa-inbox"></i><span>No standard messages yet.</span></div>';
-            } else {
-                renderMessagesInbox(standardMessages, !showLoading);
+        if (!messages.length) {
+            if (shouldUpdate) {
+                listEl.innerHTML = '<div class="messages-empty-state"><i class="fas fa-inbox"></i><span>No messages yet. Use the compose form above to send a message to your admin.</span></div>';
+                MEMBER_MESSAGE_STATE.lastPayloadHash = payloadHash;
             }
-            renderMeetingActivity(meetingInvites);
-            MEMBER_MESSAGE_STATE.lastPayloadHash = payloadHash;
+            return;
         }
 
+        if (shouldUpdate) {
+            renderMessagesInbox(messages, !showLoading);
+            MEMBER_MESSAGE_STATE.lastPayloadHash = payloadHash;
+        }
     } catch (err) {
         console.error('loadMessagesInbox error:', err);
         if (showLoading || !listEl.innerHTML.trim()) {
@@ -3104,7 +3007,7 @@ async function sendMessageToAdmin(e) {
 
 // Hook into messages section navigation
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.nav-item[data-target="messagesSection"], .nav-item[data-target="meetingActivitySection"]').forEach(navEl => {
+    document.querySelectorAll('.nav-item[data-target="messagesSection"]').forEach(navEl => {
         navEl.addEventListener('click', () => {
             setTimeout(loadMessagesInbox, 200);
             startMemberInboxPoller();
