@@ -1138,14 +1138,19 @@ function renderNotificationsFeed() {
         'security': { icon: 'fa-shield-alt', color: '#ef4444' },
         'system': { icon: 'fa-cog', color: '#8b5cf6' },
         'meeting': { icon: 'fa-video', color: '#06b6d4' },
-        'approval': { icon: 'fa-check-circle', color: '#10b981' }
+        'approval': { icon: 'fa-check-circle', color: '#10b981' },
+        'denial': { icon: 'fa-times-circle', color: '#ef4444' },
+        'member_approval': { icon: 'fa-user-check', color: '#10b981' },
+        'member_denial': { icon: 'fa-user-times', color: '#ef4444' },
+        'loan_created': { icon: 'fa-hand-holding-usd', color: '#3b82f6' },
+        'contribution_recorded': { icon: 'fa-piggy-bank', color: '#4caf50' }
     };
 
     const filtered = filterVal === 'all' ? logs : logs.filter(l => {
         const msg = (l.message || '').toLowerCase();
         const type = (l.type || '').toLowerCase();
-        if (filterVal === 'loan') return msg.includes('loan') || msg.includes('repay') || type === 'loan';
-        if (filterVal === 'contribution') return msg.includes('contribut') || msg.includes('payment') || type === 'contribution';
+        if (filterVal === 'loan') return msg.includes('loan') || msg.includes('repay') || type === 'loan' || type === 'loan_created';
+        if (filterVal === 'contribution') return msg.includes('contribut') || msg.includes('payment') || type === 'contribution' || type === 'contribution_recorded';
         if (filterVal === 'expense') return msg.includes('expense') || type === 'expense';
         if (filterVal === 'security') return msg.includes('security') || msg.includes('login') || type === 'security';
         if (filterVal === 'system') return msg.includes('system') || type === 'system';
@@ -1159,18 +1164,36 @@ function renderNotificationsFeed() {
 
     feed.innerHTML = filtered.slice(0, 50).map(l => {
         const msg = (l.message || '').toLowerCase();
+        const type = (l.type || '').toLowerCase();
         let matchedType = 'system';
-        if (msg.includes('loan') || msg.includes('repay') || (l.type || '').toLowerCase() === 'loan') matchedType = 'loan';
-        else if (msg.includes('contribut') || msg.includes('payment') || (l.type || '').toLowerCase() === 'contribution') matchedType = 'contribution';
-        else if (msg.includes('expense') || (l.type || '').toLowerCase() === 'expense') matchedType = 'expense';
-        else if (msg.includes('security') || msg.includes('login') || (l.type || '').toLowerCase() === 'security') matchedType = 'security';
-        else if (msg.includes('meeting') || (l.type || '').toLowerCase() === 'meeting') matchedType = 'meeting';
-        else if (msg.includes('approval') || (l.type || '').toLowerCase() === 'approval') matchedType = 'approval';
+        
+        // Check for specific event types first
+        if (type === 'member_approval' || type === 'approval') matchedType = 'member_approval';
+        else if (type === 'member_denial' || type === 'denial') matchedType = 'member_denial';
+        else if (type === 'loan_created') matchedType = 'loan_created';
+        else if (type === 'contribution_recorded') matchedType = 'contribution_recorded';
+        // Fallback to message content matching
+        else if (msg.includes('loan') || msg.includes('repay')) matchedType = 'loan';
+        else if (msg.includes('contribut') || msg.includes('payment')) matchedType = 'contribution';
+        else if (msg.includes('expense')) matchedType = 'expense';
+        else if (msg.includes('security') || msg.includes('login')) matchedType = 'security';
+        else if (msg.includes('meeting')) matchedType = 'meeting';
+        else if (msg.includes('approved') || msg.includes('approval')) matchedType = 'approval';
+        else if (msg.includes('denied') || msg.includes('denial')) matchedType = 'denial';
+        
         const meta = typeIconMap[matchedType] || typeIconMap['system'];
         const timestamp = l.timestamp_str || (l.created_at ? new Date(l.created_at).toLocaleString() : '');
-        return `<div class="notification-item" style="border-left: 3px solid ${meta.color}; padding-left: 12px; margin-bottom: 10px;">
-            <p style="margin:0;"><i class="fas ${meta.icon}" style="color:${meta.color}; margin-right:6px;"></i> ${l.message}</p>
-            <span class="notification-time" style="font-size: 0.8rem; color: #888;">${timestamp}</span>
+        const isFromAdmin = type.includes('member') || type.includes('loan_created') || type.includes('contribution_recorded');
+        
+        return `<div class="notification-item" style="border-left: 3px solid ${meta.color}; padding-left: 12px; margin-bottom: 10px; background: ${isFromAdmin ? 'rgba(59,130,246,0.05)' : 'transparent'}; padding: 12px; border-radius: 4px;">
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <i class="fas ${meta.icon}" style="color:${meta.color}; margin-top: 2px;"></i>
+                <div style="flex: 1;">
+                    <p style="margin:0; line-height: 1.4;">${l.message}</p>
+                    ${isFromAdmin ? '<span style="font-size: 0.75rem; color: #3b82f6; font-weight: 500;">From Admin</span>' : ''}
+                </div>
+            </div>
+            <span class="notification-time" style="font-size: 0.75rem; color: #888; display: block; margin-top: 6px;">${timestamp}</span>
         </div>`;
     }).join('');
 }
