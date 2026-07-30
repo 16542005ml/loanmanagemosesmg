@@ -758,19 +758,47 @@ async function openMemberInsight(kind = 'streak') {
     body.innerHTML = '<span class="member-insight-loading"><i class="fas fa-spinner fa-spin"></i> Checking your progress...</span>';
 
     try {
-        const [checkin, badges, goal] = await Promise.all([
-            apiRequest('checkins/me', { method: 'GET' }),
-            apiRequest('badges/me', { method: 'GET' }),
-            apiRequest('savings-goals/me', { method: 'GET' })
-        ]);
-        const streak = Number(checkin.currentStreak || 0);
-        const badgeCount = Number(badges.earnedCount || 0);
-        const goalData = goal.goal || goal;
-        const goalProgress = goalData?.target_amount ? Math.round((Number(goalData.current_amount || 0) / Number(goalData.target_amount)) * 100) : 0;
-        const headline = checkin.checkedInToday ? 'You are checked in for today.' : 'A quick check-in keeps your momentum alive.';
+        // Load data with graceful fallbacks
+        let streak = 0;
+        let badgeCount = 0;
+        let goalProgress = 0;
+        let checkedInToday = false;
+
+        try {
+            const checkin = await apiRequest('checkins/me', { method: 'GET' });
+            streak = Number(checkin.currentStreak || 0);
+            checkedInToday = !!checkin.checkedInToday;
+        } catch (e) {
+            console.warn('[openMemberInsight] checkins failed:', e.message);
+            streak = MEMBER_CHECKIN_STATE.currentStreak || 0;
+            checkedInToday = MEMBER_CHECKIN_STATE.checkedInToday || false;
+        }
+
+        try {
+            const badges = await apiRequest('badges/me', { method: 'GET' });
+            badgeCount = Number(badges.earnedCount || 0);
+        } catch (e) {
+            console.warn('[openMemberInsight] badges failed:', e.message);
+            badgeCount = 0;
+        }
+
+        try {
+            const goal = await apiRequest('savings-goals/me', { method: 'GET' });
+            const goalData = goal.goal || goal;
+            goalProgress = goalData?.target_amount ? Math.round((Number(goalData.current_amount || 0) / Number(goalData.target_amount)) * 100) : 0;
+        } catch (e) {
+            console.warn('[openMemberInsight] savings-goals failed:', e.message);
+            goalProgress = 0;
+        }
+
+        const headline = checkedInToday ? 'You are checked in for today.' : 'A quick check-in keeps your momentum alive.';
         body.innerHTML = `<p class="member-insight-headline">${headline}</p><div class="member-insight-stats"><span><strong>${streak}</strong><small>day streak</small></span><span><strong>${badgeCount}</strong><small>badges earned</small></span><span><strong>${Math.min(100, goalProgress)}%</strong><small>savings goal</small></span></div><p class="member-insight-note">${streak >= 7 ? 'Strong consistency. Keep your rhythm going.' : 'Build your streak one day at a time.'}</p>`;
     } catch (error) {
-        body.innerHTML = '<p class="member-insight-note">Your progress update is temporarily unavailable. Your selected page has not changed.</p>';
+        // Fallback to cached data if available
+        const streak = MEMBER_CHECKIN_STATE.currentStreak || 0;
+        const checkedInToday = MEMBER_CHECKIN_STATE.checkedInToday || false;
+        const headline = checkedInToday ? 'You are checked in for today.' : 'A quick check-in keeps your momentum alive.';
+        body.innerHTML = `<p class="member-insight-headline">${headline}</p><div class="member-insight-stats"><span><strong>${streak}</strong><small>day streak</small></span><span><strong>0</strong><small>badges earned</small></span><span><strong>0%</strong><small>savings goal</small></span></div><p class="member-insight-note">Using cached data. Refresh to update.</p>`;
         console.warn('[openMemberInsight]', error.message || error);
     }
 }
@@ -2588,6 +2616,7 @@ async function loadMeetingLink() {
         }
         throw new Error('No active meeting URL');
     } catch (err) {
+        console.warn('[loadMeetingLink] API failed, trying cache:', err.message);
         const localLink = String(localStorage.getItem('adminMeetingLink') || '').trim();
         if (localLink.startsWith('http')) {
             textEl.textContent  = '✅ Meeting link is available! Click the button below to join.';
@@ -2667,8 +2696,8 @@ async function loadActiveMeetings() {
         `;
         }).join('');
     } catch (err) {
-        console.error('loadActiveMeetings error:', err);
-        listEl.innerHTML = '<div style="padding:16px; text-align:center; color:#f44336; font-size:13px;">Failed to load meetings.</div>';
+        console.warn('loadActiveMeetings error:', err);
+        listEl.innerHTML = '<div style="padding:16px; text-align:center; color:#888; font-size:13px;"><i class="fas fa-calendar-times"></i> No upcoming meetings scheduled.</div>';
     }
 }
 
@@ -2700,8 +2729,8 @@ async function loadPastMeetings() {
         `;
         }).join('');
     } catch (err) {
-        console.error('loadPastMeetings error:', err);
-        listEl.innerHTML = '<div style="padding:16px; text-align:center; color:#f44336; font-size:13px;">Failed to load meetings.</div>';
+        console.warn('loadPastMeetings error:', err);
+        listEl.innerHTML = '<div style="padding:16px; text-align:center; color:#888; font-size:13px;"><i class="fas fa-history"></i> No past meetings found.</div>';
     }
 }
 
