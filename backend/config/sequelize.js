@@ -46,7 +46,14 @@ const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
     idle: numberFromEnv(process.env.DB_POOL_IDLE, 10000)
   },
   retry: {
-    max: 0
+    max: 3,
+    match: [
+      /ETIMEDOUT/,
+      /EHOSTUNREACH/,
+      /ECONNREFUSED/,
+      /ECONNRESET/,
+      /SequelizeConnectionError/
+    ]
   }
 });
 

@@ -188,7 +188,7 @@
 
     // Define Global API Base URL
     // Update this to the current production backend URL whenever the deployment changes.
-    var defaultRailwayUrl = 'https://project2026-64ro.onrender.com';
+    var defaultRailwayUrl = 'https://new-lm-pages.onrender.com';
     var apiBase = '/api';
     if (typeof window !== 'undefined' && window.location) {
         try {

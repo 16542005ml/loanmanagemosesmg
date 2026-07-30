@@ -1,57 +1,72 @@
 const express = require('express');
 const router = express.Router();
 
+// Helper function to safely load routes
+function safeRequire(path, mountPath) {
+  try {
+    const routeModule = require(path);
+    router.use(mountPath, routeModule);
+    console.log(`[API] Mounted ${mountPath} from ${path}`);
+  } catch (err) {
+    console.error(`[API] Failed to load ${path}:`, err.message);
+    // Mount a fallback route that returns an error
+    router.use(mountPath, (req, res) => {
+      res.status(500).json({ status: 'fail', message: `Route module failed to load: ${err.message}` });
+    });
+  }
+}
+
 // Auth / Registration
-router.use('/auth', require('./auth_mysql'));
+safeRequire('./auth_mysql', '/auth');
 
 // Members
-router.use('/members', require('./members_mysql'));
+safeRequire('./members_mysql', '/members');
 
 // Loans
-router.use('/loans', require('./loans_mysql'));
+safeRequire('./loans_mysql', '/loans');
 
 // Repayments
-router.use('/repayments', require('./repayments_mysql'));
+safeRequire('./repayments_mysql', '/repayments');
 
 // Contributions & Dues
-router.use('/contributions', require('./contributions_mysql'));
+safeRequire('./contributions_mysql', '/contributions');
 
 // Expenses
-router.use('/expenses', require('./expenses_mysql'));
+safeRequire('./expenses_mysql', '/expenses');
 
 // System Logs (Section 4)
-router.use('/logs', require('./system_logs_mysql'));
+safeRequire('./system_logs_mysql', '/logs');
 
 // Verifications & Portal Config
-router.use('/verifications', require('./verifications_mysql'));
+safeRequire('./verifications_mysql', '/verifications');
 
 // Treasurer Console (Section 2, items 1-7)
-router.use('/treasurer', require('./treasurer_mysql'));
+safeRequire('./treasurer_mysql', '/treasurer');
 
 // Automation (Section 5, items 1-2)
-router.use('/automation', require('./automation_mysql'));
+safeRequire('./automation_mysql', '/automation');
 
 // Corporate Portal Feature Set (SHMS Expansion)
-router.use('/corporate', require('./corporate_mysql'));
+safeRequire('./corporate_mysql', '/corporate');
 
 // Main Safeguard (Treasurer Financial Oversight)
-router.use('/safeguard', require('./safeguard_mysql'));
+safeRequire('./safeguard_mysql', '/safeguard');
 
 // App Settings (blur gate, etc.)
-router.use('/settings', require('./settings_mysql'));
+safeRequire('./settings_mysql', '/settings');
 
 // Meeting Minutes Registry
-router.use('/minutes', require('./minutes_mysql'));
+safeRequire('./minutes_mysql', '/minutes');
 
 // Member Messages (member-to-admin inbox, unread badge)
-router.use('/messages', require('./messages_mysql'));
+safeRequire('./messages_mysql', '/messages');
 
 // Live System Updates (real-time event log)
-router.use('/live-updates', require('./live_updates_mysql'));
+safeRequire('./live_updates_mysql', '/live-updates');
 
 // Engagement & Motivation — daily check-ins, badges, savings goals
-router.use('/checkins', require('./checkins_mysql'));
-router.use('/badges', require('./badges_mysql'));
-router.use('/savings-goals', require('./savings_goals_mysql'));
+safeRequire('./checkins_mysql', '/checkins');
+safeRequire('./badges_mysql', '/badges');
+safeRequire('./savings_goals_mysql', '/savings-goals');
 
 module.exports = router;

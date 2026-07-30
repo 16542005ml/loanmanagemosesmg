@@ -2381,6 +2381,14 @@ setInterval(async () => {
     }
 }, 30000);
 
+// Global message inbox poller - runs continuously to detect new admin messages
+// regardless of which section the member is viewing
+setInterval(async () => {
+    if (CURRENT_SESSION && CURRENT_SESSION.id && isApprovedMemberSession(CURRENT_SESSION)) {
+        await loadUnreadCount();
+    }
+}, 10000); // Check every 10 seconds
+
 // 
 //  SESSION TIMEOUT (10 MINUTES INACTIVITY)
 // 

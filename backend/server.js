@@ -32,7 +32,8 @@ const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || [
   'http://localhost:4000',
   'http://127.0.0.1:4000',
   'https://project2026-64ro.onrender.com',
-  'https://new-lm-pages.onrender.com'
+  'https://new-lm-pages.onrender.com',
+  'https://mosesmg255-jpg.github.io'
 ].join(','))
   .split(',').map(s => s.trim());
 
@@ -190,7 +191,28 @@ function getPreferredIP() {
 let server;
 
 // --- API Routes (always registered BEFORE DB connects to avoid cold-start HTML errors) ---
-app.use('/api', require('./routes/api'));
+try {
+  const apiRoutes = require('./routes/api');
+  app.use('/api', apiRoutes);
+  console.log('[SERVER] API routes mounted successfully');
+} catch (err) {
+  console.error('[SERVER] Failed to mount API routes:', err.message);
+  // Mount a fallback that returns error info
+  app.use('/api', (req, res) => {
+    res.status(500).json({ status: 'fail', message: 'API routes failed to load', error: err.message });
+  });
+}
+
+// Diagnostic endpoint to verify API router is mounted (must be before catch-all)
+app.get('/api/diag', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'API router is responding',
+    timestamp: new Date().toISOString(),
+    routes_mounted: true,
+    available_routes: ['/auth', '/members', '/loans', '/repayments', '/contributions', '/expenses', '/logs', '/verifications', '/treasurer', '/automation', '/corporate', '/safeguard', '/settings', '/minutes', '/messages', '/live-updates', '/checkins', '/badges', '/savings-goals']
+  });
+});
 
 // Serve landing page as index
 app.get('/', (req, res) => {
