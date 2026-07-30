@@ -23,9 +23,22 @@ const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
   dialect: 'mysql',
   logging: process.env.DB_LOGGING === 'true' ? console.log : false,
   timezone: '+00:00',
-  dialectOptions: {
-    connectTimeout: DB_CONNECT_TIMEOUT_MS
-  },
+  dialectOptions: (() => {
+    const opts = { connectTimeout: DB_CONNECT_TIMEOUT_MS };
+    if (process.env.DB_SSL === 'true' || process.env.DB_SSL === '1') {
+      opts.ssl = {
+        require: true,
+        rejectUnauthorized: false // Bypasses strict CA validation for easier setup
+      };
+      
+      // If a specific CA cert is provided via ENV (Base64 encoded or raw string)
+      if (process.env.DB_SSL_CA) {
+        opts.ssl.ca = process.env.DB_SSL_CA;
+        opts.ssl.rejectUnauthorized = true;
+      }
+    }
+    return opts;
+  })(),
   pool: {
     max: numberFromEnv(process.env.DB_POOL_MAX, 10),
     min: numberFromEnv(process.env.DB_POOL_MIN, 2),
