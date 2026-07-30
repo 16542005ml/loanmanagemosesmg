@@ -5,6 +5,7 @@ const { getAdminFromRequest, requireAdmin, getMemberFromRequest, getFallbackAdmi
 const { loanCreateRules } = require('../validation');
 const { sendEmail, templates } = require('../services/emailService');
 const { sendSMS, smsTemplates } = require('../smsService');
+const { logAdminAction } = require('./live_updates_mysql');
 
 const router = express.Router();
 
@@ -214,6 +215,15 @@ router.post('/create', loanCreateRules, async (req, res) => {
           subject: 'Loan Application Confirmed - Loan Management System',
           html
         }).catch(() => {});
+
+        // Log admin action to live updates
+        await logAdminAction(
+          ownerAdminId || admin?.id || 'system',
+          Number(member_id),
+          memberFullName || borrowerNameClean || 'Member',
+          'loan_created',
+          `Your loan application #${loan.id} for KES ${Number(amount).toLocaleString()} has been approved by ${adminName}. Due date: ${dueDate || 'Not set'}.`
+        );
       }
       
       const memberPhone = memberRows && memberRows[0] && memberRows[0].phone;

@@ -9,6 +9,7 @@ const { Op } = require('sequelize');
 const { memberCreateRules } = require('../validation');
 const { sendEmail, templates } = require('../services/emailService');
 const { sendSMS, smsTemplates } = require('../smsService');
+const { logAdminAction } = require('./live_updates_mysql');
 
 const router = express.Router();
 
@@ -569,6 +570,15 @@ router.post('/process-approval', async (req, res) => {
       pendingMember.admin_id = admin.id;
       await pendingMember.save();
 
+      // Log admin action to live updates
+      await logAdminAction(
+        admin.id,
+        pendingMember.id,
+        pendingMember.full_name,
+        'member_approval',
+        `Your membership has been approved by ${admin.full_name || admin.name || 'System Admin'}. You can now log in to access all member features.`
+      );
+
       // Send approval email to newly approved member
       if (pendingMember.email) {
         const html = templates.memberApproved({
@@ -612,6 +622,15 @@ router.post('/process-approval', async (req, res) => {
     pendingMember.approved = false;
     pendingMember.admin_id = admin.id;
     await pendingMember.save();
+
+    // Log admin action to live updates
+    await logAdminAction(
+      admin.id,
+      pendingMember.id,
+      pendingMember.full_name,
+      'member_denial',
+      `Your membership application has been denied. Reason: ${reason || 'Admin denied'}. If you believe this is an error, please contact your administrator.`
+    );
 
     // Send rejection email to denied member
     if (pendingMember.email) {

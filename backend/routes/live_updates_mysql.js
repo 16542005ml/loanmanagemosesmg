@@ -7,6 +7,34 @@ const router = express.Router();
 function ok(res, data) { return res.json({ status: 'success', message: 'OK', data }); }
 function fail(res, code, message) { return res.status(code).json({ status: 'fail', message }); }
 
+/**
+ * Helper function to log admin actions to live_system_updates
+ * Used by other routes to notify members of admin actions
+ */
+async function logAdminAction(adminId, memberId, memberName, eventType, eventBody) {
+  try {
+    await sequelize.query(
+      `INSERT INTO live_system_updates (admin_id, member_id, member_name, event_type, event_body)
+       VALUES (:adminId, :memberId, :memberName, :eventType, :eventBody)`,
+      {
+        type: sequelize.QueryTypes.INSERT,
+        replacements: {
+          adminId: String(adminId),
+          memberId: memberId ? Number(memberId) : null,
+          memberName: String(memberName || 'System'),
+          eventType: String(eventType).trim().substring(0, 100),
+          eventBody: String(eventBody).trim()
+        }
+      }
+    );
+  } catch (e) {
+    console.error('[logAdminAction] Error:', e);
+  }
+}
+
+module.exports = router;
+module.exports.logAdminAction = logAdminAction;
+
 // Auto-create live_system_updates table
 (async () => {
   try {

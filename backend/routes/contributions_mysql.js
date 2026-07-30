@@ -5,6 +5,7 @@ const { getAdminFromRequest, requireAdmin, getFallbackAdminId, getMemberFromRequ
 const { contributionCreateRules } = require('../validation');
 const { upload, handleUploadError } = require('../uploadValidation');
 const { sendEmail, templates } = require('../services/emailService');
+const { logAdminAction } = require('./live_updates_mysql');
 
 const router = express.Router();
 
@@ -90,6 +91,15 @@ router.post('/create', upload.single('receipt'), contributionCreateRules, handle
           subject: 'Contribution Receipt - Loan Management System',
           html
         }).catch(() => {});
+
+        // Log admin action to live updates
+        await logAdminAction(
+          admin?.id || approved?.admin_id || 'system',
+          Number(member_id),
+          memberName,
+          'contribution_recorded',
+          `Your contribution of KES ${Number(amount).toLocaleString()} via ${payment_method || 'Not specified'} has been recorded by ${adminName}. Receipt #: CNT-${new Date().toISOString().slice(0,10).replace(/-/g, '')}-${String(contribution.id).padStart(3, '0')}.`
+        );
       }
     } catch (emailErr) {
       console.warn('[contributions/create] Could not send contribution receipt email:', emailErr.message);
