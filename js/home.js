@@ -2931,8 +2931,126 @@ function showToast(message, type = 'success') {
 }
 
 // a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*
-//  CORPORATE PORTAL DATA FETCHING & RENDERING
+//  DYNAMIC FORM VALIDATION
 // a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*
+
+const validationRules = {
+  email: {
+    pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    message: 'Please enter a valid email address'
+  },
+  phone: {
+    pattern: /^(\+254|0)[17]\d{8}$/,
+    message: 'Please enter a valid Kenyan phone number (e.g., +254700123456 or 0712345678)'
+  },
+  pin: {
+    pattern: /^\d{4}$/,
+    message: 'PIN must be exactly 4 digits'
+  },
+  amount: {
+    pattern: /^\d+(\.\d{1,2})?$/,
+    message: 'Please enter a valid amount (e.g., 1000 or 1000.50)'
+  },
+  required: {
+    validate: (value) => value && value.trim().length > 0,
+    message: 'This field is required'
+  },
+  minLength: (min) => ({
+    validate: (value) => value && value.length >= min,
+    message: `Minimum ${min} characters required`
+  }),
+  maxLength: (max) => ({
+    validate: (value) => value && value.length <= max,
+    message: `Maximum ${max} characters allowed`
+  })
+};
+
+function validateField(input, rules) {
+  const value = input.value;
+  const errorElement = input.parentElement.querySelector('.validation-error') || 
+                      input.parentElement.parentElement.querySelector('.validation-error');
+  
+  if (errorElement) {
+    errorElement.remove();
+  }
+
+  for (const rule of rules) {
+    let isValid = true;
+    let message = '';
+
+    if (typeof rule === 'string') {
+      const predefinedRule = validationRules[rule];
+      if (predefinedRule) {
+        if (predefinedRule.pattern) {
+          isValid = predefinedRule.pattern.test(value);
+        } else if (predefinedRule.validate) {
+          isValid = predefinedRule.validate(value);
+        }
+        message = predefinedRule.message;
+      }
+    } else if (typeof rule === 'function') {
+      const customRule = rule(value);
+      isValid = customRule.validate(value);
+      message = customRule.message;
+    } else if (rule.validate) {
+      isValid = rule.validate(value);
+      message = rule.message;
+    }
+
+    if (!isValid) {
+      input.style.borderColor = '#f44336';
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'validation-error';
+      errorDiv.style.cssText = 'color: #f44336; font-size: 11px; margin-top: 4px;';
+      errorDiv.textContent = message;
+      input.parentElement.appendChild(errorDiv);
+      return false;
+    }
+  }
+
+  input.style.borderColor = '';
+  return true;
+}
+
+function validateForm(formId, fieldRules) {
+  const form = document.getElementById(formId);
+  if (!form) return false;
+
+  let isValid = true;
+  const inputs = form.querySelectorAll('input, select, textarea');
+
+  inputs.forEach(input => {
+    const rules = fieldRules[input.id];
+    if (rules) {
+      const fieldValid = validateField(input, rules);
+      if (!fieldValid) isValid = false;
+    }
+  });
+
+  return isValid;
+}
+
+// Add real-time validation to form fields
+function setupDynamicValidation(formId, fieldRules) {
+  const form = document.getElementById(formId);
+  if (!form) return;
+
+  Object.keys(fieldRules).forEach(fieldId => {
+    const input = document.getElementById(fieldId);
+    if (input) {
+      input.addEventListener('blur', () => validateField(input, fieldRules[fieldId]));
+      input.addEventListener('input', () => {
+        if (input.style.borderColor === 'rgb(244, 67, 54)') {
+          validateField(input, fieldRules[fieldId]);
+        }
+      });
+    }
+  });
+}
+
+// a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*
+//  CORPORATE PORTAL DATA FETCHING & RENDERING
+// a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*
 let corpUsers = [];
 let corpRooms = [];
 let corpTravels = [];

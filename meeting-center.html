@@ -418,6 +418,8 @@
 
   <script src="js/home.js"></script>
   <script>
+    const API_BASE = window.__API_BASE__ || '/api';
+    
     const meetingCenterState = {
       allMeetings: [],
       selectedMeetingIds: new Set(),
@@ -433,6 +435,163 @@
         Custom: 'Meeting Header\n\nMeeting Information\n\nAttendance Register\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information'
       }
     };
+
+    // Load approved members dynamically
+    async function loadMeetingMembers() {
+      try {
+        const res = await fetch(`${API_BASE}/members/approved`, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        meetingCenterState.members = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+        
+        // Populate member dropdowns
+        const recipientsSelect = document.getElementById('meetingLinkRecipients');
+        if (recipientsSelect) {
+          recipientsSelect.innerHTML = meetingCenterState.members.length === 0 
+            ? '<option value="">No members available</option>'
+            : meetingCenterState.members.map(m => `<option value="${m.id}">${m.full_name || m.name} (${m.email})</option>`).join('');
+        }
+      } catch (e) {
+        console.error('Failed to load members:', e);
+      }
+    }
+
+    // Apply template to minutes body
+    function applyMinutesTemplate() {
+      const templateSelect = document.getElementById('minutesTemplate');
+      const minutesBody = document.getElementById('minutesBody');
+      if (!templateSelect || !minutesBody) return;
+      
+      const selectedTemplate = templateSelect.value;
+      if (meetingCenterState.meetingTemplates[selectedTemplate]) {
+        minutesBody.value = meetingCenterState.meetingTemplates[selectedTemplate];
+      }
+    }
+
+    // Save minutes record
+    async function saveMinutesRecord() {
+      const title = document.getElementById('meetingTitle')?.value;
+      const type = document.getElementById('meetingType')?.value;
+      const date = document.getElementById('meetingDate')?.value;
+      const time = document.getElementById('meetingStartTime')?.value;
+      const venue = document.getElementById('meetingVenue')?.value;
+      const link = document.getElementById('meetingLink')?.value;
+      const template = document.getElementById('minutesTemplate')?.value;
+      const content = document.getElementById('minutesBody')?.value;
+
+      if (!title || !date) {
+        alert('Please enter meeting title and date');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/minutes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            meeting_type: type,
+            meeting_date: date,
+            meeting_time: time,
+            venue,
+            online_link: link,
+            template,
+            minutes_content: content
+          })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          alert('Minutes saved successfully!');
+          // Clear form
+          document.getElementById('meetingTitle').value = '';
+          document.getElementById('minutesBody').value = '';
+        } else {
+          alert('Failed to save: ' + (data.message || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error saving minutes: ' + e.message);
+      }
+    }
+
+    // Download minutes report
+    function downloadMinutesReport() {
+      const title = document.getElementById('meetingTitle')?.value || 'Meeting';
+      const content = document.getElementById('minutesBody')?.value || '';
+      
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${title.replace(/\s+/g, '_')}_minutes.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Copy meeting link
+    function copyMeetingLink() {
+      const link = document.getElementById('meetingLink')?.value;
+      if (!link) {
+        alert('No meeting link to copy');
+        return;
+      }
+      navigator.clipboard.writeText(link).then(() => {
+        alert('Link copied to clipboard!');
+      }).catch(() => {
+        alert('Failed to copy link');
+      });
+    }
+
+    // Send meeting link to members
+    async function sendMeetingLinkToMembers() {
+      const link = document.getElementById('meetingLink')?.value;
+      const message = document.getElementById('meetingLinkMessage')?.value;
+      const recipientsSelect = document.getElementById('meetingLinkRecipients');
+      
+      if (!link) {
+        alert('Please enter a meeting link');
+        return;
+      }
+
+      const selectedMembers = Array.from(recipientsSelect?.selectedOptions || []).map(opt => opt.value);
+      if (selectedMembers.length === 0) {
+        alert('Please select at least one member');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/messages/send-meeting-link`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            meeting_link: link,
+            message,
+            member_ids: selectedMembers
+          })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          alert('Meeting link sent successfully!');
+          document.getElementById('meetingLinkMessage').value = '';
+        } else {
+          alert('Failed to send: ' + (data.message || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error sending link: ' + e.message);
+      }
+    }
+
+    // Open generate minutes dialog (placeholder)
+    function openGenerateMinutesDialog() {
+      alert('Meeting minutes form is ready. Fill in the details below and click Save Minutes.');
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      loadMeetingMembers();
+    });
 
     function toggleActionsDropdown() {
       const menu = document.getElementById('meetingActionsMenu');
