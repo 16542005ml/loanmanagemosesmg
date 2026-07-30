@@ -118,14 +118,18 @@ app.get('/api/health', async (req, res) => {
     ok: true,
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
-    memory: process.memoryUsage(),
     db: 'disconnected',
     host: sequelize.connectionDetails.host,
-    database: sequelize.connectionDetails.database
+    database: sequelize.connectionDetails.database,
+    adminTest: null
   };
   try {
     await sequelize.authenticate();
     health.db = 'connected';
+    const [users] = await sequelize.query(
+      `SELECT id, full_name, email FROM admins WHERE email = 'testadmin@loanmgr.com' LIMIT 1`
+    );
+    health.adminTest = users;
   } catch (err) {
     health.db = 'error: ' + err.message;
     health.ok = false;
