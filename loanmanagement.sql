@@ -1,12 +1,11 @@
 -- ============================================================
--- SQL script for phpMyAdmin: loanmanagement database + all tables
+-- SQL script for phpMyAdmin: FreeSQL database (sql12834250) + all tables
 -- Updated: Full schema supporting all portal sections (1-7)
+-- Note: Uses existing FreeSQL database, does not create new database
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS `loanmanagement`
-  DEFAULT CHARACTER SET utf8mb4
-  DEFAULT COLLATE utf8mb4_unicode_ci;
-USE `loanmanagement`;
+-- Use the existing FreeSQL database
+USE `sql12834250`;
 
 -- =========================
 -- Admins (PHP login/register)
@@ -181,7 +180,8 @@ CREATE TABLE IF NOT EXISTS `capital_pool` (
   `total_capital` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
   `available_capital` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
   `committed_loans` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
-  `last_updated` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_updated` DATETIME NULL DEFAULT NULL,
+  `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_capital_pool_admin` (`admin_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -253,7 +253,7 @@ CREATE TABLE IF NOT EXISTS `app_settings` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `setting_key` VARCHAR(100) NOT NULL UNIQUE,
   `setting_value` MEDIUMTEXT NOT NULL,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =========================
@@ -271,8 +271,8 @@ CREATE TABLE IF NOT EXISTS `meeting_minutes` (
   `body` TEXT,
   `next_meeting_date` DATE,
   `secretary` VARCHAR(255),
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_meeting_minutes_admin` (`admin_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -370,7 +370,7 @@ CREATE TABLE IF NOT EXISTS `scheduled_meetings` (
   `attendance_count` INT DEFAULT 0,
   `minutes_status` VARCHAR(100) DEFAULT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_scheduled_meetings_admin` (`admin_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
