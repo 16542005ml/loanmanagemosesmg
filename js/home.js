@@ -1,3 +1,4 @@
+window.__API_BASE__ = 'https://new-lm-pages.onrender.com/api';
 /**
  * ==========================================================================
  * CORE CHAMA MANAGEMENT MATRIX ENGINE a" DB-BACKED (loanmanagement MySQL)

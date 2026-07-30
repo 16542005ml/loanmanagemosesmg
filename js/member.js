@@ -1,3 +1,4 @@
+window.__API_BASE__ = 'https://new-lm-pages.onrender.com/api';
 /**
  * ==========================================================================
  * DATA STRUCTURE INITIALIZER MATRIX & STATE STORAGE
@@ -2791,18 +2792,23 @@ function renderMeetingActivity(invites) {
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; color: #e0f7ff;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; color: #e0f7ff; margin-bottom: 4px;">
                     <div style="display:flex; flex-direction:column;"><span style="font-size:11px; opacity:0.6; text-transform:uppercase;">Date &amp; Time</span><span>${escHtml(md.date)} at ${escHtml(md.time)}</span></div>
                     <div style="display:flex; flex-direction:column;"><span style="font-size:11px; opacity:0.6; text-transform:uppercase;">Venue</span><span>${escHtml(md.venue)}</span></div>
                     <div style="display:flex; flex-direction:column;"><span style="font-size:11px; opacity:0.6; text-transform:uppercase;">Committee</span><span>${escHtml(md.committee)}</span></div>
                     <div style="display:flex; flex-direction:column;"><span style="font-size:11px; opacity:0.6; text-transform:uppercase;">Organizer</span><span>${escHtml(md.organizer)}</span></div>
                 </div>
+                
+                <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; font-size:12px; color:#cfd8fc; border-left:3px solid #00e0ff; margin-bottom: 4px;">
+                    <span style="display:block; font-size:10px; opacity:0.7; text-transform:uppercase; margin-bottom:4px;">Administrator Message</span>
+                    ${m.subject ? escHtml(m.subject) : 'No additional message.'}
+                </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
                     <button class="action-btn" onclick="window.location.href='meeting-center.html?join=${md.meeting_id}'" style="font-size: 12px; padding: 6px 12px; background: linear-gradient(90deg, #00e0ff, #0077ff); color: #000; border: none; font-weight: bold;">
-                        <i class="fas fa-link"></i> Join
+                        <i class="fas fa-link"></i> Join Meeting
                     </button>
-                    ${isUnread ? `<button class="action-btn" onclick="markMeetingInviteRead('${m.id}')" style="font-size: 12px; padding: 6px 12px;"><i class="fas fa-eye"></i> Mark Read</button>` : ''}
+                    ${isUnread ? `<button class="action-btn" onclick="markMeetingInviteRead('${m.id}')" style="font-size: 12px; padding: 6px 12px;"><i class="fas fa-eye"></i> Mark as Read</button>` : ''}
                     <button class="btn-del" onclick="deleteMemberMessageForMe('${m.id}')" style="font-size: 12px; padding: 6px 12px;"><i class="fas fa-trash"></i> Delete</button>
                 </div>
             </div>

@@ -1,3 +1,4 @@
+window.__API_BASE__ = 'https://new-lm-pages.onrender.com/api';
 document.querySelector('form').addEventListener('submit', async (e) => {
     e.preventDefault();
 

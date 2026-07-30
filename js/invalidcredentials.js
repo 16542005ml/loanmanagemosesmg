@@ -1,3 +1,4 @@
+window.__API_BASE__ = 'https://new-lm-pages.onrender.com/api';
   window.addEventListener('DOMContentLoaded', () => {
             const email = sessionStorage.getItem('pending_email');
             const password = sessionStorage.getItem('pending_password');

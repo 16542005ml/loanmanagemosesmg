@@ -1,3 +1,4 @@
+window.__API_BASE__ = 'https://new-lm-pages.onrender.com/api';
 // login.js
 const API = window.__API_BASE__ || '/api';
 
