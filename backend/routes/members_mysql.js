@@ -489,7 +489,8 @@ router.get('/dashboard-pools', async (req, res) => {
 
 /**
  * POST /api/members/process-approval
- * body: { id, action } where action is 'approve' | 'deny'
+ * body: { id, action, reason } where action is 'approve' | 'deny'
+ * reason is optional and used only for denial
  *
  * ADDITIVE workflow (does not remove existing approve/reject endpoints).
  * - Approve: INSERT into approved_members and UPDATE `members` status='approved'
@@ -499,7 +500,7 @@ router.post('/process-approval', async (req, res) => {
   try {
     const admin = requireAdmin(req, res);
     if (!admin) return;
-    const { id, action } = req.body || {};
+    const { id, action, reason } = req.body || {};
     if (!id) return fail(res, 400, 'Missing id');
     if (!action || !['approve', 'deny'].includes(String(action))) return fail(res, 400, 'Invalid action');
 
@@ -594,14 +595,15 @@ router.post('/process-approval', async (req, res) => {
 
     await sequelize.query(
       `INSERT INTO denied_access (full_name, email, phone, admin_id, denied_at, restriction_reason)
-       VALUES (:full_name, :email, :phone, :admin_id, NOW(), 'Admin denied')`,
+       VALUES (:full_name, :email, :phone, :admin_id, NOW(), :reason)`,
       {
         type: sequelize.QueryTypes.INSERT,
         replacements: {
           full_name: pendingMember.full_name,
           email: pendingMember.email,
           phone: pendingMember.phone,
-          admin_id: admin.id
+          admin_id: admin.id,
+          reason: reason || 'Admin denied'
         }
       }
     );
@@ -613,12 +615,17 @@ router.post('/process-approval', async (req, res) => {
 
     // Send rejection email to denied member
     if (pendingMember.email) {
-      const [subject, html] = emailTemplates.memberDenied({
-        memberName: pendingMember.full_name,
-        email:      pendingMember.email,
-        adminName:  admin.full_name || admin.name || 'System Admin'
+      const html = templates.memberDenied({
+        name: pendingMember.full_name,
+        email: pendingMember.email,
+        reason: reason || 'Admin denied',
+        date: new Date().toLocaleDateString()
       });
-      sendEmail(pendingMember.email, subject, html, null, getAdminFrom(admin)).catch(() => {});
+      sendEmail({
+        to: pendingMember.email,
+        subject: 'Membership Application Status - Loan Management System',
+        html
+      }).catch(() => {});
     }
     if (pendingMember.phone) {
       sendSMS(pendingMember.phone, smsTemplates.memberDenied({

@@ -75,13 +75,15 @@ router.post('/create', upload.single('receipt'), contributionCreateRules, handle
       const memberName = memberRecord?.full_name || memberRecord?.name || approved?.full_name || 'Member';
       if (memberEmail) {
         const receiptNumber = `CNT-${new Date().toISOString().slice(0,10).replace(/-/g, '')}-${String(contribution.id).padStart(3, '0')}`;
+        const adminName = admin?.full_name || admin?.name || 'System Admin';
         const html = templates.contributionReceipt({
           name: memberName,
           receiptNumber,
           amount: Number(amount),
           paymentMethod: payment_method || 'Not specified',
           date: new Date().toLocaleDateString(),
-          status: 'Confirmed'
+          status: 'Confirmed',
+          recordedBy: adminName
         });
         sendEmail({
           to: memberEmail,

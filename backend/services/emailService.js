@@ -160,7 +160,7 @@ const templates = {
   `,
 
   // Loan Application Confirmation
-  loanCreated: ({ name, loanId, principalAmount, interestRate, totalOwed, duration, dueDate, status }) => `
+  loanCreated: ({ name, loanId, principalAmount, interestRate, totalOwed, duration, dueDate, status, approvedBy }) => `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
         <h1 style="color: white; margin: 0;">🏦 Loan Management System</h1>
@@ -200,6 +200,11 @@ const templates = {
               <td style="padding: 10px; color: #666;">Status</td>
               <td style="padding: 10px; color: #2196F3; font-weight: bold;">${status}</td>
             </tr>
+            ${approvedBy ? `
+            <tr>
+              <td style="padding: 10px; color: #666;">Approved By</td>
+              <td style="padding: 10px; color: #333;">${approvedBy}</td>
+            </tr>` : ''}
           </table>
         </div>
         
@@ -255,7 +260,7 @@ const templates = {
   `,
 
   // Contribution Receipt
-  contributionReceipt: ({ name, receiptNumber, amount, paymentMethod, date, status }) => `
+  contributionReceipt: ({ name, receiptNumber, amount, paymentMethod, date, status, recordedBy }) => `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
         <h1 style="color: white; margin: 0;">🏦 Loan Management System</h1>
@@ -287,6 +292,11 @@ const templates = {
               <td style="padding: 10px; color: #666;">Status</td>
               <td style="padding: 10px; color: #4CAF50; font-weight: bold;">${status}</td>
             </tr>
+            ${recordedBy ? `
+            <tr>
+              <td style="padding: 10px; color: #666;">Recorded By</td>
+              <td style="padding: 10px; color: #333;">${recordedBy}</td>
+            </tr>` : ''}
           </table>
         </div>
         

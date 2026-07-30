@@ -197,6 +197,7 @@ router.post('/create', loanCreateRules, async (req, res) => {
         }
         const principalAmount = Number(amount);
         const totalOwed = principalAmount + (principalAmount * (interest_rate || 0) / 100);
+        const adminName = adminObj.full_name || adminObj.name || 'System Admin';
         const html = templates.loanCreated({
           name: memberFullName || borrowerNameClean || 'Member',
           loanId: loan.id,
@@ -205,7 +206,8 @@ router.post('/create', loanCreateRules, async (req, res) => {
           totalOwed,
           duration: duration || 0,
           dueDate: dueDate || 'Not set',
-          status: 'Active'
+          status: 'Active',
+          approvedBy: adminName
         });
         sendEmail({
           to: memberEmail,
