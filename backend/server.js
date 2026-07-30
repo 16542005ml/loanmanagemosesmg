@@ -31,19 +31,30 @@ const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || [
   'http://127.0.0.1:3000',
   'http://localhost:4000',
   'http://127.0.0.1:4000',
-  'https://project2026-64ro.onrender.com'
+  'https://project2026-64ro.onrender.com',
+  'https://new-lm-pages.onrender.com'
 ].join(','))
   .split(',').map(s => s.trim());
+
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || ALLOWED_ORIGINS.includes(origin) || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(null, false); // Block gracefully without throwing an unhandled Exception
     }
   },
   credentials: true
 }));
+
+// Clean 403 response for blocked CORS
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && !ALLOWED_ORIGINS.includes(origin) && !origin.startsWith('http://localhost') && !origin.startsWith('http://127.0.0.1')) {
+    return res.status(403).json({ status: 'fail', message: 'CORS policy rejected request', error: 'Not allowed by CORS' });
+  }
+  next();
+});
 
 // --- Body Parsing ---
 app.use(express.json({ limit: '1mb' }));
@@ -189,6 +200,12 @@ app.get('/', (req, res) => {
 // Catch-all 404 — always returns JSON, never HTML
 app.use((req, res) => {
   res.status(404).json({ status: 'fail', message: 'Not found' });
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('[GLOBAL ERROR]', err);
+  res.status(500).json({ status: 'fail', message: 'Internal Server Error', error: err.message });
 });
 
 async function startServer() {
