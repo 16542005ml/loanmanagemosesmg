@@ -4,6 +4,7 @@ const { sequelize } = require('../models');
 const bcrypt = require('bcryptjs');
 const { signAdminToken } = require('../adminContext');
 const { registerRules, loginRules } = require('../validation');
+const { sendEmail, emailTemplates } = require('../emailService');
 
 (async () => {
     try {
@@ -144,6 +145,19 @@ router.post('/login', async (req, res) => {
         }
 
         const token = signAdminToken(admin);
+
+        // Send security alert
+        const ipRaw = req.ip || req.connection && req.connection.remoteAddress || req.socket && req.socket.remoteAddress || '';
+        try {
+            const [subject, html] = emailTemplates.adminLoginAlert({
+                adminName: admin.full_name || 'Admin',
+                email: admin.email,
+                loginTime: new Date().toLocaleString('en-KE'),
+                ipAddress: ipRaw || 'Unknown'
+            });
+            sendEmail(admin.email, subject, html).catch(() => {});
+        } catch (emailErr) {}
+
         return res.json({
             status: 'success',
             message: 'Successfully logged in. Opening your session...',

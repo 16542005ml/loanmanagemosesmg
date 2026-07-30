@@ -139,6 +139,10 @@
                 <li><a href="#" class="nav-item" data-target="reportsSection"><i class="fas fa-file-invoice-dollar"></i> Live Ledger</a></li>
                 <li><a href="#" class="nav-item" data-target="contributionsSection"><i class="fas fa-piggy-bank"></i> Contributions / Savings</a></li>
                 <li><a href="#" class="nav-item" data-target="expensesSection"><i class="fas fa-file-invoice"></i> Expense Claims</a></li>
+                <li><a href="#" class="nav-item" data-target="meetingActivitySection" id="navMeetingActivityLink">
+                    <i class="fas fa-calendar-check"></i> Meeting Activity
+                    <span id="navMeetingBadge" onclick="event.stopPropagation()" style="display:none; background:#ef4444; color:#fff; border-radius:50%; font-size:10px; font-weight:bold; min-width:16px; height:16px; line-height:16px; text-align:center; padding:0 3px; margin-left:6px; cursor:default;">0</span>
+                </a></li>
                 <li><a href="#" class="nav-item" data-target="messagesSection" id="navMessagesLink">
                     <i class="fas fa-envelope"></i> Messages
                     <span id="navMsgBadge" onclick="event.stopPropagation()" style="display:none; background:#ef4444; color:#fff; border-radius:50%; font-size:10px; font-weight:bold; min-width:16px; height:16px; line-height:16px; text-align:center; padding:0 3px; margin-left:6px; cursor:default;">0</span>
@@ -857,6 +861,25 @@
                                 <tr><td colspan="4" style="text-align: center;" class="text-muted">Loading expense claims...</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MEETING ACTIVITY SECTION -->
+            <section id="meetingActivitySection" class="content-section" style="display: none;">
+                <div class="panel-card">
+                    <div class="messages-hero" style="background: linear-gradient(135deg, rgba(0,224,255,0.1), rgba(0,119,255,0.1)); padding: 20px; border-radius: 12px; margin-bottom: 20px; border-bottom: 2px solid rgba(0,224,255,0.3);">
+                        <h2 style="margin: 0; color: var(--color-primary); display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-calendar-check"></i> Meeting Activity
+                        </h2>
+                        <p style="margin: 8px 0 0; opacity: 0.8;">View and manage your meeting invitations.</p>
+                    </div>
+                    
+                    <div id="meetingActivityContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; opacity: 0.6;">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px;"></i>
+                            <p>Loading meeting activity...</p>
+                        </div>
                     </div>
                 </div>
             </section>

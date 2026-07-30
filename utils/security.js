@@ -201,7 +201,7 @@
 
         if (window.location.protocol === 'file:') {
             // Local file system — always point to local dev server
-            apiBase = 'http://127.0.0.1:4000/api';
+            apiBase = 'http://127.0.0.1:3000/api';
         } else if (window.location.hostname.endsWith('github.io')) {
             // GitHub Pages — must use external backend
             var customBackend = localStorage.getItem('railway_backend_url');

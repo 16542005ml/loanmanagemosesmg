@@ -198,6 +198,78 @@
       font-size: 11px;
       color: #cfd8fc;
     }
+    .meeting-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+    .meeting-flow-card {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(0, 224, 255, 0.15);
+      border-radius: 12px;
+      padding: 16px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .meeting-flow-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 224, 255, 0.1);
+    }
+    .meeting-flow-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding-bottom: 8px;
+    }
+    .meeting-flow-title {
+      font-size: 1.1rem;
+      color: #00e0ff;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+    }
+    .meeting-flow-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #a3dafe;
+    }
+    .meeting-flow-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 13px;
+      color: #e0f7ff;
+    }
+    .meeting-flow-details div {
+      display: flex;
+      flex-direction: column;
+    }
+    .meeting-flow-details div span:first-child {
+      font-size: 11px;
+      opacity: 0.6;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .meeting-flow-desc {
+      font-size: 12px;
+      color: rgba(255,255,255,0.7);
+      margin-top: 4px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 8px;
+    }
+    .meeting-flow-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+      padding-top: 12px;
+    }
     .meeting-panel {
       display: grid;
       grid-template-columns: 1fr 300px;
@@ -481,7 +553,7 @@
       </div>
     </section>
 
-    <section class="meeting-section">
+    <section class="meeting-section" style="display: none;">
       <h2>Meeting Records</h2>
       <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom: 16px; align-items:center;">
         <input id="meetingSearch" type="search" placeholder="Search meetings..." style="flex:1; min-width:220px;" oninput="filterMeetingRecords()" />
@@ -495,29 +567,11 @@
         </select>
         <button class="action-btn" style="background:#4caf50;" onclick="loadMeetingRecords()">Refresh</button>
       </div>
-      <div class="meeting-table-wrapper">
-        <table class="meeting-table" id="meetingRecordsTable">
-          <thead>
-            <tr>
-              <th><input type="checkbox" id="selectAllMeetings" onchange="toggleAllMeetingSelection(this.checked)"></th>
-              <th>ID</th>
-              <th>Title</th>
-              <th>Committee</th>
-              <th>Organizer</th>
-              <th>Chairperson</th>
-              <th>Date</th>
-              <th>Time</th>
-              <th>Venue</th>
-              <th>Attendance</th>
-              <th>Minutes</th>
-              <th>Status</th>
-              <th>Updated</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="meetingRecordsBody"></tbody>
-        </table>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding: 0 10px;">
+        <input type="checkbox" id="selectAllMeetings" onchange="toggleAllMeetingSelection(this.checked)">
+        <label for="selectAllMeetings" style="color:#e0f7ff; font-size:13px; cursor:pointer;">Select All Meetings</label>
       </div>
+      <div class="meeting-cards-grid" id="meetingRecordsGrid"></div>
     </section>
   </main>
 
@@ -527,6 +581,7 @@
       allMeetings: [],
       selectedMeetingIds: new Set(),
       agendaItems: [],
+      attendanceRecords: [],
       members: [],
       editingMeetingId: null,
       meetingTemplates: {
@@ -571,12 +626,10 @@
       try {
         const rows = await apiCall('members/all?status=approved', { method: 'GET' });
         meetingCenterState.members = Array.isArray(rows) ? rows : [];
-        const selects = ['meetingPresent', 'meetingAbsent', 'meetingApology', 'meetingGuests'];
-        selects.forEach(id => {
-          const el = document.getElementById(id);
-          if (!el) return;
-          el.innerHTML = meetingCenterState.members.map(m => `<option value="${m.id}">${m.full_name} (${m.phone || m.email || 'N/A'})</option>`).join('');
-        });
+        const el = document.getElementById('attendanceMemberSelect');
+        if (el) {
+          el.innerHTML = '<option value="">-- Select Member --</option>' + meetingCenterState.members.map(m => `<option value="${m.id}">${m.full_name} (${m.phone || m.email || 'N/A'})</option>`).join('');
+        }
       } catch (e) {
         console.warn('[loadMeetingMembers]', e.message || e);
       }
@@ -621,7 +674,7 @@
     }
 
     function renderMeetingRecords() {
-      const tbody = document.getElementById('meetingRecordsBody');
+      const grid = document.getElementById('meetingRecordsGrid');
       const search = (document.getElementById('meetingSearch')?.value || '').toLowerCase();
       const statusFilter = (document.getElementById('meetingStatusFilter')?.value || 'all');
       const rows = meetingCenterState.allMeetings.filter(m => {
@@ -630,30 +683,47 @@
         if (statusFilter !== 'all' && (m.status || 'Scheduled') !== statusFilter) return false;
         return true;
       });
-      if (!tbody) return;
-      tbody.innerHTML = rows.map(m => `
-        <tr>
-          <td style="text-align:center;"><input type="checkbox" data-id="${m.id}" onchange="toggleMeetingSelection(${m.id}, this.checked)"></td>
-          <td>#${m.id}</td>
-          <td>${m.title || 'Untitled'}</td>
-          <td>${m.target_group || '-'}</td>
-          <td>${m.organizer || '-'}</td>
-          <td>${m.chair || '-'}</td>
-          <td>${m.meeting_date || '-'}</td>
-          <td>${m.meeting_time || '-'}</td>
-          <td>${m.location || '-'}</td>
-          <td>${m.attendance_count || 0}</td>
-          <td>${m.minutes_status || 'N/A'}</td>
-          <td>${m.status || 'Scheduled'}</td>
-          <td>${m.updated_at ? new Date(m.updated_at).toLocaleString() : '-'}</td>
-          <td class="action-buttons">
-            <button class="action-btn" onclick="previewMeeting(${m.id})">Preview</button>
-            <button class="action-btn" onclick="openEditMeeting(${m.id})">Edit</button>
-            <button class="btn-del" onclick="deleteMeeting(${m.id})">Delete</button>
-          </td>
-        </tr>
-      `).join('');
-      if (!rows.length) tbody.innerHTML = '<tr><td colspan="14" style="text-align:center; opacity:0.6; padding:18px;">No meeting records found.</td></tr>';
+      if (!grid) return;
+      grid.innerHTML = rows.map(m => {
+        const updatedStr = m.updated_at ? new Date(m.updated_at).toLocaleString() : '-';
+        const createdStr = m.created_at ? new Date(m.created_at).toLocaleDateString() : '-';
+        return `
+        <div class="meeting-flow-card">
+          <div class="meeting-flow-header">
+            <div>
+              <h3 class="meeting-flow-title">${m.title || 'Untitled'}</h3>
+              <div class="meeting-flow-meta">
+                <span>#${m.id}</span>
+                <span>•</span>
+                <span style="color: ${m.status === 'Completed' ? '#4caf50' : m.status === 'Cancelled' ? '#f44336' : '#ff9800'}">${m.status || 'Scheduled'}</span>
+              </div>
+            </div>
+            <input type="checkbox" data-id="${m.id}" onchange="toggleMeetingSelection(${m.id}, this.checked)" style="transform: scale(1.2);">
+          </div>
+          
+          <div class="meeting-flow-details">
+            <div><span>Date & Time</span><span>${m.meeting_date || '-'} at ${m.meeting_time || '-'}</span></div>
+            <div><span>Venue</span><span>${m.location || '-'}</span></div>
+            <div><span>Committee</span><span>${m.target_group || '-'}</span></div>
+            <div><span>Organizer</span><span>${m.organizer || '-'}</span></div>
+          </div>
+          
+          <div class="meeting-flow-desc">
+             <div><span style="font-size:11px;opacity:0.6;text-transform:uppercase;">Description</span></div>
+             <div style="margin-bottom:8px;">${m.notes ? (m.notes.length > 80 ? m.notes.substring(0,80) + '...' : m.notes) : 'No description provided.'}</div>
+             <div style="font-size: 11px; opacity: 0.5;">Created: ${createdStr} | Updated: ${updatedStr}</div>
+          </div>
+          
+          <div class="meeting-flow-footer">
+            <div class="action-buttons" style="display:flex; gap:6px;">
+              <button class="action-btn" onclick="previewMeeting(${m.id})" style="font-size:11px; padding:6px 10px;">Preview</button>
+              <button class="action-btn" onclick="openEditMeeting(${m.id})" style="font-size:11px; padding:6px 10px;">Edit</button>
+              <button class="btn-del" onclick="deleteMeeting(${m.id})" style="font-size:11px; padding:6px 10px;">Delete</button>
+            </div>
+          </div>
+        </div>
+      `}).join('');
+      if (!rows.length) grid.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; opacity:0.6; padding:18px;">No meeting records found.</div>';
     }
 
     function filterMeetingRecords() {
@@ -938,41 +1008,47 @@
     }
 
     async function sendMeetingLinkToMembers() {
-      const meetingUrl = (document.getElementById('meetingLink')?.value || '').trim();
-      const title = (document.getElementById('meetingTitle')?.value || 'TLMS Meeting').trim();
-      if (!meetingUrl || !meetingUrl.startsWith('http')) {
-        return alert('Enter a valid meeting URL before sending it to members.');
+      if (meetingCenterState.selectedMeetingIds.size === 0) {
+        return alert('Please select at least one meeting to share the link for.');
       }
-      const message = `A meeting link has been shared for ${title}.\n\nJoin here: ${meetingUrl}`;
+      
+      const confirmSend = confirm(`Share meeting invitations for ${meetingCenterState.selectedMeetingIds.size} meeting(s) to all members?`);
+      if (!confirmSend) return;
+
       try {
-        await apiCall('messages/broadcast', {
-          method: 'POST',
-          body: JSON.stringify({ subject: `Meeting Link: ${title}`, body: message, target_group: 'all' })
-        });
-        if (meetingCenterState.editingMeetingId) {
-          await apiCall('automation/meetings/' + meetingCenterState.editingMeetingId, {
-            method: 'PUT',
-            body: JSON.stringify({ meeting_url: meetingUrl })
+        let sentCount = 0;
+        for (const meetingId of meetingCenterState.selectedMeetingIds) {
+          const m = meetingCenterState.allMeetings.find(x => x.id === meetingId);
+          if (!m) continue;
+          
+          const payload = {
+            type: "meeting_invite",
+            meeting_id: m.id,
+            title: m.title || "Untitled Meeting",
+            date: m.meeting_date || "",
+            time: m.meeting_time || "",
+            venue: m.location || "",
+            organizer: m.organizer || "System",
+            committee: m.target_group || "All Members"
+          };
+          
+          await apiCall('messages/broadcast', {
+            method: 'POST',
+            body: JSON.stringify({ 
+              subject: `Meeting Invite: ${m.title || 'Upcoming Meeting'}`, 
+              body: JSON.stringify(payload), 
+              target_group: m.target_group || 'all' 
+            })
           });
+          sentCount++;
         }
-        await apiCall('minutes/save', {
-          method: 'POST',
-          body: JSON.stringify({
-            title: `Meeting Link Shared: ${title}`,
-            date: (document.getElementById('meetingDate')?.value || new Date().toISOString().slice(0, 10)),
-            venue: (document.getElementById('meetingVenue')?.value || ''),
-            chair: (document.getElementById('meetingChairperson')?.value || ''),
-            attendees: meetingCenterState.members.map(m => m.full_name).join(', '),
-            agenda: meetingCenterState.agendaItems.map((item, idx) => `${idx + 1}. ${item.title || 'Agenda item'}`).join('\n'),
-            body: message,
-            next_meeting_date: (document.getElementById('meetingDate')?.value || null),
-            secretary: (document.getElementById('meetingSecretary')?.value || ''),
-            meeting_url: meetingUrl
-          })
-        });
-        alert('Meeting link sent to members and saved.');
+        alert(`Successfully shared ${sentCount} meeting invitation(s) with members!`);
+        meetingCenterState.selectedMeetingIds.clear();
+        document.querySelectorAll('input[type="checkbox"][data-id]').forEach(cb => cb.checked = false);
+        if (document.getElementById('selectAllMeetings')) document.getElementById('selectAllMeetings').checked = false;
       } catch (e) {
-        alert('Failed to send meeting link: ' + (e.message || e));
+        console.error(e);
+        alert('An error occurred while sending meeting links. Please try again.');
       }
     }
 

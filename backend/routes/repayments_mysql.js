@@ -3,6 +3,9 @@ const bcrypt = require('bcryptjs');
 const { Repayment, Loan, Member, sequelize } = require('../models');
 const { requireAdmin, getAdminFromRequest, getMemberFromRequest, getFallbackAdminId } = require('../adminContext');
 const { repaymentCreateRules } = require('../validation');
+const { sendEmail, emailTemplates, getAdminFrom } = require('../emailService');
+const { sendSMS, smsTemplates } = require('../smsService');
+
 
 const router = express.Router();
 
@@ -125,6 +128,47 @@ router.post('/create', repaymentCreateRules, async (req, res) => {
       loan.status = 'Settled';
       await loan.save();
     }
+
+    // Send repayment receipt email
+    try {
+      const memberRows = await sequelize.query(
+        `SELECT email, full_name, admin_id FROM approved_members WHERE id = :id LIMIT 1
+         UNION
+         SELECT email, full_name, admin_id FROM members WHERE id = :id LIMIT 1`,
+        { type: sequelize.QueryTypes.SELECT, replacements: { id: loan.borrower_id } }
+      );
+      const mData = memberRows && memberRows[0];
+      if (mData && mData.email) {
+        let adminObj = admin || {};
+        if (!adminObj.email && (loan.admin_id || mData.admin_id)) {
+          const [adminRow] = await sequelize.query(
+            `SELECT email, full_name FROM admins WHERE id = :id LIMIT 1`,
+            { type: sequelize.QueryTypes.SELECT, replacements: { id: loan.admin_id || mData.admin_id } }
+          ).catch(() => [[]]);
+          if (adminRow) adminObj = adminRow;
+        }
+
+        const [subject, html] = emailTemplates.repaymentReceived({
+          memberName:       mData.full_name || loan.borrower_name || 'Member',
+          amount:           Number(amount),
+          paymentMethod:    payment_method,
+          loanId:           loan_id,
+          repaymentId:      repayment.id,
+          remainingBalance: Math.max(0, Number(loan.amount) - totalPaid),
+          loanStatus:       loan.status
+        });
+        sendEmail(mData.email, subject, html, null, getAdminFrom(adminObj)).catch(() => {});
+      }
+
+      if (mData && mData.phone) {
+        sendSMS(mData.phone, smsTemplates.repaymentReceived({
+          memberName:       mData.full_name || loan.borrower_name || 'Member',
+          amount:           Number(amount),
+          remainingBalance: Math.max(0, Number(loan.amount) - totalPaid),
+          isSettled:        loan.status === 'Settled'
+        })).catch(() => {});
+      }
+    } catch (emailErr) {}
 
     return ok(res, {
       id: String(repayment.id),

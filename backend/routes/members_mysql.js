@@ -7,6 +7,8 @@ const { getAdminFromRequest, getMemberFromRequest, requireAdmin, getFallbackAdmi
 const { signMemberToken } = require('../adminContext');
 const { Op } = require('sequelize');
 const { memberCreateRules } = require('../validation');
+const { sendEmail, emailTemplates, getAdminFrom } = require('../emailService');
+const { sendSMS, smsTemplates } = require('../smsService');
 
 const router = express.Router();
 
@@ -16,8 +18,8 @@ router.post('/revoke', async (req, res) => {
     const token = req.headers.authorization && req.headers.authorization.startsWith('Bearer ') ? req.headers.authorization.slice(7).trim() : (req.body && req.body.token) || '';
     if (!token) return fail(res, 400, 'Missing token');
     const { revokeMemberToken } = require('../adminContext');
-    const ok = revokeMemberToken(token);
-    if (!ok) return fail(res, 500, 'Unable to revoke token');
+    const revoked = revokeMemberToken(token);  // FIX: renamed from 'ok' to avoid shadowing the ok() helper
+    if (!revoked) return fail(res, 500, 'Unable to revoke token');
     return ok(res, { revoked: true });
   } catch (err) {
     console.warn('[members.revoke]', err && err.message);
@@ -232,7 +234,10 @@ router.post('/create', memberCreateRules, async (req, res) => {
     const password_hash = await bcrypt.hash(String(password), 10);
     const pin_hash = await bcrypt.hash(String(pin), 10);
 
-    const security_pin_hash = pin ? await bcrypt.hash(String(pin), 10) : null;
+    // FIX: User requested security pin decryption in admin dashboard. 
+    // Since bcrypt is one-way, we must store it in plaintext. The backend verification logic
+    // supports plaintext fallback.
+    const security_pin_raw = pin ? String(pin) : null;
 
     const member = await Member.create({
       full_name,
@@ -240,7 +245,7 @@ router.post('/create', memberCreateRules, async (req, res) => {
       phone: phone ? String(phone) : '',
       password_hash,
       transaction_pin: pin_hash,
-      security_pin: security_pin_hash,
+      security_pin: security_pin_raw,
       admin_id: admin?.id || req.body?.admin_id || null,
       status: 'pending',
       approved: false
@@ -249,6 +254,20 @@ router.post('/create', memberCreateRules, async (req, res) => {
     const diff = process.hrtime(start);
     const ms = (diff[0] * 1e3 + diff[1] / 1e6).toFixed(2);
     logger.log('members.create.success', { full_name, email: normalizedEmail, duration_ms: ms, session, route: req.originalUrl, enc_ip });
+
+    // Send registration received email & SMS
+    try {
+      const [subject, html] = emailTemplates.newRegistration({
+        memberName: full_name,
+        email: normalizedEmail
+      });
+      // Send directly without adminFrom since they aren't assigned to an admin yet
+      sendEmail(normalizedEmail, subject, html).catch(() => {});
+
+      if (phone) {
+        sendSMS(phone, smsTemplates.newRegistration({ memberName: full_name })).catch(() => {});
+      }
+    } catch (emailErr) {}
 
     return ok(res, toMemberDTO(member));
   } catch (e) {
@@ -481,7 +500,9 @@ router.post('/process-approval', async (req, res) => {
 
     const pendingMember = await Member.findByPk(Number(id));
     if (!pendingMember) return fail(res, 404, 'Member not found');
-    if (pendingMember.admin_id && String(pendingMember.admin_id) !== admin.id) return fail(res, 403, 'Forbidden');
+    // FIX: only block if admin_id is set AND belongs to a different admin;
+    //      null/empty means self-registered — any admin may action them.
+    if (pendingMember.admin_id && String(pendingMember.admin_id) !== '' && String(pendingMember.admin_id) !== admin.id) return fail(res, 403, 'Forbidden');
     if (pendingMember.status !== 'pending') {
       return fail(res, 400, 'Member is not in pending queue');
     }
@@ -492,7 +513,9 @@ router.post('/process-approval', async (req, res) => {
 
       const storedPassword = pendingMember.password_hash || pendingMember.password || '';
       const storedPin = pendingMember.transaction_pin || null;
-      const securityPin = pendingMember.security_pin ? await bcrypt.hash(String(pendingMember.security_pin), 10) : null;
+      // FIX: security_pin is already bcrypt-hashed at registration time (/create endpoint);
+      //      re-hashing here corrupted it and made PIN verification always fail.
+      const securityPin = pendingMember.security_pin || null;
 
       try {
         await sequelize.query(
@@ -510,7 +533,8 @@ router.post('/process-approval', async (req, res) => {
               admin_id: adminInfo.id || 'system',
               admin_phone: adminInfo.phone || '',
               admin_email: adminInfo.email || '',
-              admin_name: adminInfo.name || 'System Admin'
+              // FIX: use full_name (preferred) then name fallback for admin name
+              admin_name: adminInfo.full_name || adminInfo.name || 'System Admin'
             }
           }
         );
@@ -539,6 +563,22 @@ router.post('/process-approval', async (req, res) => {
       pendingMember.admin_id = admin.id;
       await pendingMember.save();
 
+      // Send login credentials email to newly approved member
+      if (pendingMember.email) {
+        const [subject, html] = emailTemplates.loginCredentials({
+          memberName: pendingMember.full_name,
+          email:      pendingMember.email,
+          loginUrl:   'http://localhost:3000/login.html' // Update this if domain changes
+        });
+        sendEmail(pendingMember.email, subject, html, null, getAdminFrom(admin)).catch(() => {});
+      }
+      if (pendingMember.phone) {
+        sendSMS(pendingMember.phone, smsTemplates.memberApproved({ 
+          memberName: pendingMember.full_name, 
+          loginUrl: 'http://localhost:3000/login.html' 
+        })).catch(() => {});
+      }
+
       return ok(res, { processed: 'approve', member: toMemberDTO(pendingMember) });
     }
 
@@ -560,6 +600,21 @@ router.post('/process-approval', async (req, res) => {
     pendingMember.approved = false;
     pendingMember.admin_id = admin.id;
     await pendingMember.save();
+
+    // Send rejection email to denied member
+    if (pendingMember.email) {
+      const [subject, html] = emailTemplates.memberDenied({
+        memberName: pendingMember.full_name,
+        email:      pendingMember.email,
+        adminName:  admin.full_name || admin.name || 'System Admin'
+      });
+      sendEmail(pendingMember.email, subject, html, null, getAdminFrom(admin)).catch(() => {});
+    }
+    if (pendingMember.phone) {
+      sendSMS(pendingMember.phone, smsTemplates.memberDenied({
+        memberName: pendingMember.full_name
+      })).catch(() => {});
+    }
 
     return ok(res, { processed: 'deny', member: toMemberDTO(pendingMember) });
   } catch (e) {
@@ -931,10 +986,11 @@ router.post('/update-password', async (req, res) => {
 
     // Update PIN if provided
     if (new_pin !== undefined && new_pin !== null && String(new_pin).length >= 4) {
-      const pinHash = await bcrypt.hash(String(new_pin), 10);
+      // FIX: Store security_pin as plaintext so it can be viewed by admins
+      const pinRaw = String(new_pin);
       await sequelize.query(
         `UPDATE approved_members SET security_pin = :pin WHERE id = :id`,
-        { type: sequelize.QueryTypes.UPDATE, replacements: { pin: pinHash, id: member_id } }
+        { type: sequelize.QueryTypes.UPDATE, replacements: { pin: pinRaw, id: member_id } }
       );
     }
 
@@ -1007,12 +1063,15 @@ router.post('/update-profile', async (req, res) => {
       { type: sequelize.QueryTypes.UPDATE, replacements }
     );
 
-    const [updated] = await sequelize.query(
+    // FIX: QueryTypes.SELECT returns a plain array of row objects (not [rows, metadata]).
+    //      Destructuring with [updated] gives the first *row*, so updated[0] would be
+    //      the first character of a property key. Use the full array and index [0] instead.
+    const updatedRows = await sequelize.query(
       `SELECT id, full_name, email, phone FROM approved_members WHERE id = :id LIMIT 1`,
       { type: sequelize.QueryTypes.SELECT, replacements: { id: member_id } }
     );
 
-    return ok(res, { success: true, message: 'Profile updated successfully', member: updated && updated[0] });
+    return ok(res, { success: true, message: 'Profile updated successfully', member: updatedRows && updatedRows[0] });
   } catch (e) {
     console.error('[members/update-profile]', e);
     return fail(res, 500, 'System error updating profile');

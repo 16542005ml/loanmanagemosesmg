@@ -378,4 +378,30 @@ router.delete('/member-thread', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/messages/member-mark-read
+ * Member marks their own received messages as read.
+ * Body: { ids: [1,2,3] }
+ */
+router.post('/member-mark-read', async (req, res) => {
+  try {
+    const member = getMemberFromRequest(req);
+    if (!member) return fail(res, 401, 'Member session required.');
+
+    const { ids } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) return fail(res, 400, 'No IDs provided.');
+
+    const placeholders = ids.map(() => '?').join(',');
+    await sequelize.query(
+      `UPDATE member_messages SET is_read = 1 WHERE member_id = ? AND id IN (${placeholders})`,
+      { replacements: [Number(member.id), ...ids.map(Number)] }
+    );
+
+    return ok(res, { marked: ids.length });
+  } catch (e) {
+    console.error('[messages/member-mark-read]', e);
+    return fail(res, 500, 'Error marking messages as read.');
+  }
+});
+
 module.exports = router;

@@ -59,11 +59,11 @@ const SYSTEM_SYNC_KEYS = {
 };
 
 // a"a" API Base a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"a"
-// Use an explicit API base when available; if opened via file:// fallback to localhost:4000
+// Use an explicit API base when available; if opened via file:// fallback to localhost:3000
 const API = (function(){
   if (window.__API_BASE__) return window.__API_BASE__;
   try {
-    if (window.location && window.location.protocol === 'file:') return 'http://127.0.0.1:4000/api';
+    if (window.location && window.location.protocol === 'file:') return 'http://127.0.0.1:3000/api';
   } catch(e) {}
   return '/api';
 })();
@@ -139,6 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await renderRepaymentsLedger();      // repayments
   await renderLoansTableDashboard();   // loans table
   populateLoanAssigneeDropdown();
+  populateSecretaryDropdowns();
 
   renderNotifications();
   showSection(activeHomeSection);
@@ -277,7 +278,7 @@ function showSection(id, options = {}) {
     if (normalizedId === 'controlSector')  loadDashboardTiles();
     if (normalizedId === 'repayments')     renderRepaymentsLedger();
     if (normalizedId === 'notifications')  loadNotificationsFromDB().then(renderNotifications);
-    if (normalizedId === 'loans')          renderLoansTableDashboard().then(populateLoanAssigneeDropdown);
+    if (normalizedId === 'loans')          renderLoansTableDashboard().then(() => { populateLoanAssigneeDropdown(); populateSecretaryDropdowns(); });
     if (normalizedId === 'corporatePortal') loadCorporatePortal();
     if (normalizedId === 'members')        loadVerificationDashboard();
   }
@@ -384,7 +385,7 @@ async function refreshActiveHomeSection() {
     } else if (activeHomeSection === 'notifications') {
       refreshers.push(loadNotificationsFromDB().then(renderNotifications));
     } else if (activeHomeSection === 'loans') {
-      refreshers.push(renderLoansTableDashboard().then(populateLoanAssigneeDropdown));
+      refreshers.push(renderLoansTableDashboard().then(() => { populateLoanAssigneeDropdown(); populateSecretaryDropdowns(); }));
     } else if (activeHomeSection === 'secretaryHub') {
       refreshers.push(loadAuthorizationQueue(), loadMinuteRegistry(), loadAutomationMeetings());
     } else if (activeHomeSection === 'corporatePortal') {

@@ -1,6 +1,8 @@
 const express = require('express');
 const { sequelize } = require('../models');
 const { requireAdmin, getFallbackAdminId, getMemberFromRequest } = require('../adminContext');
+const { sendEmail, emailTemplates, getAdminFrom } = require('../emailService');
+const { sendSMS, smsTemplates } = require('../smsService');
 
 const router = express.Router();
 
@@ -213,6 +215,48 @@ router.post('/meetings/create', async (req, res) => {
         }
       }
     );
+
+    // ── Send meeting notification emails and SMS to all members of this admin ──
+    // (runs async, non-blocking — API responds immediately)
+    setImmediate(async () => {
+      try {
+        const members = await sequelize.query(
+          `SELECT full_name, email, phone FROM approved_members
+           WHERE admin_id = :adminId`,
+          { type: sequelize.QueryTypes.SELECT, replacements: { adminId: admin.id } }
+        );
+        const adminFrom = getAdminFrom(admin);
+        let notifiedEmailCount = 0;
+        let notifiedSmsCount = 0;
+        for (const m of members) {
+          if (m.email) {
+            const [subject, html] = emailTemplates.meetingScheduled({
+              memberName:  m.full_name,
+              title,
+              meetingDate: meeting_date,
+              meetingTime: meeting_time,
+              location:    location || 'TBD',
+              platform:    platform || 'In-person',
+              purpose:     purpose || '',
+              meetingUrl:  meeting_url || ''
+            });
+            await sendEmail(m.email, subject, html, null, adminFrom).catch(()=>{});
+            notifiedEmailCount++;
+          }
+          if (m.phone) {
+            await sendSMS(m.phone, smsTemplates.meetingScheduled({
+              date: meeting_date,
+              time: meeting_time,
+              location: location || 'TBD'
+            })).catch(()=>{});
+            notifiedSmsCount++;
+          }
+        }
+        console.log(`[automation/meetings] Notified ${notifiedEmailCount} email(s) and ${notifiedSmsCount} SMS(s) about meeting: ${title}`);
+      } catch (emailErr) {
+        console.warn('[automation/meetings] Notification error:', emailErr.message);
+      }
+    });
 
     return ok(res, { id: result, title });
   } catch (e) {

@@ -27,34 +27,27 @@ app.use(helmet({
 
 // --- CORS ---
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || [
-  'http://localhost:4000',
-  'http://127.0.0.1:4000',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
+  'http://localhost:4000',
+  'http://127.0.0.1:4000',
   'https://project2026-64ro.onrender.com'
 ].join(','))
   .split(',').map(s => s.trim());
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, server-to-server)
-    if (!origin) return callback(null, true);
-    // Allow localhost and 127.0.0.1 (local dev)
-    if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) return callback(null, true);
-    // Allow Railway-generated domains (*.railway.app, *.up.railway.app)
-    if (origin.endsWith('.railway.app') || origin.endsWith('.up.railway.app')) return callback(null, true);
-    // Allow localtunnel tunnels (*.loca.lt)
-    if (origin.endsWith('.loca.lt')) return callback(null, true);
-    // Allow GitHub Pages
-    if (origin.endsWith('.github.io')) return callback(null, true);
-    // Allow explicitly whitelisted origins
-    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
-    callback(new Error('Not allowed by CORS'));
+    if (!origin || ALLOWED_ORIGINS.includes(origin) || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
   },
   credentials: true
 }));
 
 // --- Body Parsing ---
 app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' })); // support native HTML form POSTs
 app.use(express.urlencoded({ extended: false, limit: '1mb' })); // support native HTML form POSTs
 
 // --- WAF ---
@@ -113,9 +106,8 @@ app.use('/api/settings/verify-admin-password', authLimiter);
 app.use(express.static(path.join(__dirname, '..')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-const PORT = parseInt(process.env.PORT, 10) || 4000;
-// IMPORTANT: Do NOT use process.env.HOST — Railway injects an IPv6 address that causes EADDRNOTAVAIL.
-// Always bind to 0.0.0.0 so Node listens on all IPv4 interfaces, which is what Railway expects.
+const PORT = process.env.PORT || 4000;
+// Railway injects a custom IPv6 HOST that causes EADDRNOTAVAIL in some Node versions, so we force 0.0.0.0
 const HOST = '0.0.0.0';
 
 const { sequelize } = require('./models');
@@ -222,6 +214,14 @@ async function startServer() {
   // Routes
   app.use('/api', require('./routes/api'));
 
+  // Start email scheduler (daily repayment reminders, overdue alerts)
+  try {
+    const { startEmailScheduler } = require('./emailScheduler');
+    startEmailScheduler();
+  } catch (schedulerErr) {
+    console.warn('[server] Email scheduler failed to start:', schedulerErr.message);
+  }
+
   // Serve landing page as index (entry point for all visitors)
   app.get('/', (req, res) => {
     res.redirect('/landingpage.html');
@@ -231,21 +231,18 @@ async function startServer() {
     res.status(404).json({ status: 'fail', message: 'Not found' });
   });
 
-  // Bind to HOST (always 0.0.0.0) without specifying a host string — Railway requirement
   server = app.listen(PORT, HOST, () => {
-    const isLocal = process.env.NODE_ENV !== 'production';
+    const localHost = HOST === '127.0.0.1' || HOST === 'localhost' || HOST === '0.0.0.0' || HOST === '::' ? 'localhost' : HOST;
     console.log(`\nLM backend listening on port ${PORT}`);
-    if (isLocal) {
-      console.log(`Static files served from: ${path.join(__dirname, '..')}\n`);
-      console.log('--- Available Localhost URLs ---');
-      console.log(`  http://localhost:${PORT}/home.html          (Admin Panel)`);
-      console.log(`  http://localhost:${PORT}/member.html        (Member Portal)`);
-      console.log(`  http://localhost:${PORT}/login.html         (Admin Login)`);
-      console.log(`  http://localhost:${PORT}/landingpage.html   (Landing Page)`);
-      console.log(`  http://localhost:${PORT}/createaccount.html (Create Account)`);
-      console.log(`  http://localhost:${PORT}/api/health          (Health Check)`);
-      console.log(`--------------------------------\n`);
-    }
+    console.log(`Static files served from: ${path.join(__dirname, '..')}\n`);
+    console.log('--- Available Localhost URLs ---');
+    console.log(`  http://${localHost}:${PORT}/home.html          (Admin Panel)`);
+    console.log(`  http://${localHost}:${PORT}/member.html        (Member Portal)`);
+    console.log(`  http://${localHost}:${PORT}/login.html         (Admin Login)`);
+    console.log(`  http://${localHost}:${PORT}/landingpage.html   (Landing Page)`);
+    console.log(`  http://${localHost}:${PORT}/createaccount.html (Create Account)`);
+    console.log(`  http://${localHost}:${PORT}/api/health          (Health Check)`);
+    console.log(`--------------------------------\n`);
   });
 }
 

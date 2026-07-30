@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const { Loan, Member, sequelize } = require('../models');
 const { getAdminFromRequest, requireAdmin, getMemberFromRequest, getFallbackAdminId } = require('../adminContext');
 const { loanCreateRules } = require('../validation');
+const { sendEmail, emailTemplates, getAdminFrom } = require('../emailService');
+const { sendSMS, smsTemplates } = require('../smsService');
 
 const router = express.Router();
 
@@ -171,6 +173,49 @@ router.post('/create', loanCreateRules, async (req, res) => {
         console.error('[loans/create] Capital pool update error:', cpError);
         // Continue with loan creation even if capital pool update fails
       }
+    }
+
+    // Send loan confirmation email to the borrower
+    try {
+      const memberRows = await sequelize.query(
+        `SELECT email, full_name FROM approved_members WHERE id = :id LIMIT 1
+         UNION
+         SELECT email, full_name FROM members WHERE id = :id LIMIT 1`,
+        { type: sequelize.QueryTypes.SELECT, replacements: { id: Number(member_id) } }
+      );
+      const memberEmail = memberRows && memberRows[0] && memberRows[0].email;
+      const memberFullName = memberRows && memberRows[0] && memberRows[0].full_name;
+      if (memberEmail) {
+        // Look up admin email from DB if not in token (fallback for member-initiated loans)
+        let adminObj = admin || {};
+        if (!adminObj.email && ownerAdminId) {
+          const [adminRow] = await sequelize.query(
+            `SELECT email, full_name FROM admins WHERE id = :id LIMIT 1`,
+            { type: sequelize.QueryTypes.SELECT, replacements: { id: ownerAdminId } }
+          ).catch(() => [[]]);
+          if (adminRow) adminObj = adminRow;
+        }
+        const [subject, html] = emailTemplates.loanCreated({
+          memberName:   memberFullName || borrowerNameClean || 'Member',
+          amount:       Number(amount),
+          duration:     duration || 0,
+          interestRate: interest_rate || 0,
+          dueDate:      dueDate,
+          loanId:       loan.id
+        });
+        sendEmail(memberEmail, subject, html, null, getAdminFrom(adminObj)).catch(() => {});
+      }
+      
+      const memberPhone = memberRows && memberRows[0] && memberRows[0].phone;
+      if (memberPhone) {
+        sendSMS(memberPhone, smsTemplates.loanCreated({
+          memberName: memberFullName || borrowerNameClean || 'Member',
+          amount: Number(amount),
+          dueDate: dueDate
+        })).catch(() => {});
+      }
+    } catch (emailErr) {
+      console.warn('[loans/create] Could not send loan confirmation email/SMS:', emailErr.message);
     }
 
     return ok(res, loanDTO(loan));
