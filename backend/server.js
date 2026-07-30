@@ -121,7 +121,8 @@ app.get('/api/health', async (req, res) => {
     db: 'disconnected',
     host: sequelize.connectionDetails.host,
     database: sequelize.connectionDetails.database,
-    adminTest: null
+    adminTest: null,
+    tables: null
   };
   try {
     await sequelize.authenticate();
@@ -130,6 +131,8 @@ app.get('/api/health', async (req, res) => {
       `SELECT id, full_name, email FROM admins WHERE email = 'testadmin@loanmgr.com' LIMIT 1`
     );
     health.adminTest = users;
+    const [tables] = await sequelize.query("SHOW TABLES");
+    health.tables = tables.map(t => Object.values(t)[0]);
   } catch (err) {
     health.db = 'error: ' + err.message;
     health.ok = false;
