@@ -134,14 +134,14 @@ router.post('/login', async (req, res) => {
         );
 
         if (users.length === 0) {
-            return res.json({ status: 'fail', message: `Invalid email or password. (Debug: Not found for ${loginIdentifier})`, redirect: 'invalidcredentials.html' });
+            return res.json({ status: 'fail', message: 'Invalid email or password.', redirect: 'invalidcredentials.html' });
         }
 
         const admin = users[0];
         const isMatch = await bcrypt.compare(password, admin.password_hash);
 
         if (!isMatch) {
-            return res.json({ status: 'fail', message: `Invalid email or password. (Debug: Bad hash for ${admin.email})`, redirect: 'invalidcredentials.html' });
+            return res.json({ status: 'fail', message: 'Invalid email or password.', redirect: 'invalidcredentials.html' });
         }
 
         const token = signAdminToken(admin);
