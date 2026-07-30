@@ -322,52 +322,18 @@
   <main style="padding: 24px;">
     <section class="meeting-banner">
       <div>
-        <h2 style="margin:0 0 8px; color:#fff;">Complete Meeting Management</h2>
-        <p style="margin:0; opacity:0.7; max-width:720px;">Schedule, manage attendance, build agendas, generate minutes, and keep meeting records in a single TLMS workflow.</p>
+        <h2 style="margin:0 0 8px; color:#fff;">Meeting Minutes Generator</h2>
+        <p style="margin:0; opacity:0.7; max-width:720px;">Generate complete meeting minutes with a simple, streamlined interface.</p>
       </div>
       <div>
         <div class="meeting-actions">
-          <button class="main-btn" onclick="openScheduleDialog()">➕ Schedule New Meeting</button>
           <button class="main-btn" style="background:#4caf50; color:#fff;" onclick="openGenerateMinutesDialog()">📄 Generate Minutes</button>
-          <button class="main-btn" style="background:#ffb300; color:#000;" onclick="sendMeetingLinkToMembers()">📤 Send Meeting Link to Members</button>
-          <div class="dropdown-wrap">
-            <button class="dropdown-button" id="meetingActionsToggle" onclick="toggleActionsDropdown()">Actions ▼</button>
-            <div class="dropdown-menu" id="meetingActionsMenu">
-              <button onclick="openScheduleDialog()">Edit Meeting</button>
-              <button onclick="openScheduleDialog()">Update Meeting</button>
-              <button onclick="previewSelectedMeeting()">Preview Meeting</button>
-              <button onclick="saveMinutesRecord()">Save Minutes</button>
-              <button onclick="downloadMinutesReport()">Download</button>
-              <button onclick="exportMeetingsAsPDF()">Export PDF</button>
-              <button onclick="exportMeetingsAsDocx()">Export DOCX</button>
-              <button onclick="window.print()">Print</button>
-              <button onclick="shareMeetingLinkToMembers()">Share</button>
-              <button onclick="shareMeetingLinkByEmail()">Share by Email</button>
-              <button onclick="copyMeetingLink()">Copy Meeting Link</button>
-              <button onclick="sendMeetingNotification()">Send Notification</button>
-              <button onclick="archiveSelectedMeetings()">Archive</button>
-              <button onclick="restoreSelectedMeetings()">Restore</button>
-              <button onclick="deleteSelectedMeetings()">Delete</button>
-              <button onclick="refreshMeetingCenter()">Refresh</button>
-            </div>
-          </div>
         </div>
       </div>
     </section>
 
-    <section class="meeting-dashboard-grid" id="meetingSummaryCards">
-      <div class="meeting-card"><h3>Total Meetings</h3><strong id="summaryTotalMeetings">0</strong><div class="meeting-tag">All meetings</div></div>
-      <div class="meeting-card"><h3>Upcoming Meetings</h3><strong id="summaryUpcomingMeetings">0</strong><div class="meeting-tag">Future schedule</div></div>
-      <div class="meeting-card"><h3>Meetings This Month</h3><strong id="summaryMonthMeetings">0</strong><div class="meeting-tag">Current month</div></div>
-      <div class="meeting-card"><h3>Pending Approval</h3><strong id="summaryPendingMeetings">0</strong><div class="meeting-tag">Requires review</div></div>
-      <div class="meeting-card"><h3>Draft Minutes</h3><strong id="summaryDraftMinutes">0</strong><div class="meeting-tag">In progress</div></div>
-      <div class="meeting-card"><h3>Approved Minutes</h3><strong id="summaryApprovedMinutes">0</strong><div class="meeting-tag">Finalized</div></div>
-      <div class="meeting-card"><h3>Attendance Rate</h3><strong id="summaryAttendanceRate">0%</strong><div class="meeting-tag">Average</div></div>
-      <div class="meeting-card"><h3>Action Items</h3><strong id="summaryOutstandingActions">0</strong><div class="meeting-tag">Pending tasks</div></div>
-    </section>
-
     <section class="meeting-section">
-      <h2>Meeting Scheduler</h2>
+      <h2>Meeting Details</h2>
       <div class="section-row">
         <div class="field-group">
           <label>Meeting Title</label>
@@ -380,93 +346,18 @@
             <option value="Executive">Executive Committee</option>
             <option value="Loan">Loan Committee</option>
             <option value="Finance">Finance Committee</option>
-            <option value="Savings">Savings Committee</option>
-            <option value="Staff">Staff Meeting</option>
-            <option value="Department">Department Meeting</option>
-            <option value="Emergency">Emergency Meeting</option>
             <option value="AGM">Annual General Meeting (AGM)</option>
             <option value="SGM">Special General Meeting (SGM)</option>
-            <option value="Credit">Credit Committee Meeting</option>
             <option value="Custom">Custom</option>
           </select>
-        </div>
-        <div class="field-group">
-          <label>Committee</label>
-          <input type="text" id="meetingCommittee" placeholder="Executive Committee" />
-        </div>
-        <div class="field-group">
-          <label>Department</label>
-          <input type="text" id="meetingDepartment" placeholder="Treasurer / Finance" />
-        </div>
-        <div class="field-group full-width">
-          <label>Purpose</label>
-          <input type="text" id="meetingPurpose" placeholder="Review loan portfolio and approvals" />
-        </div>
-        <div class="field-group full-width">
-          <label>Description</label>
-          <textarea id="meetingDescription" placeholder="Provide a short summary of the meeting objectives"></textarea>
-        </div>
-        <div class="field-group">
-          <label>Status</label>
-          <select id="meetingStatus">
-            <option value="Scheduled">Scheduled</option>
-            <option value="Pending Approval">Pending Approval</option>
-            <option value="Confirmed">Confirmed</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>Priority Level</label>
-          <select id="meetingPriority">
-            <option value="Normal">Normal</option>
-            <option value="High">High</option>
-            <option value="Critical">Critical</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>Confidentiality</label>
-          <select id="meetingConfidentiality">
-            <option value="Normal">Normal</option>
-            <option value="Confidential">Confidential</option>
-            <option value="Secret">Secret</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>Organizer</label>
-          <input type="text" id="meetingOrganizer" placeholder="Head Treasurer" />
-        </div>
-        <div class="field-group">
-          <label>Chairperson</label>
-          <input type="text" id="meetingChairperson" placeholder="Chairperson" />
-        </div>
-        <div class="field-group">
-          <label>Vice Chairperson</label>
-          <input type="text" id="meetingViceChair" placeholder="Vice Chairperson" />
-        </div>
-        <div class="field-group">
-          <label>Secretary</label>
-          <input type="text" id="meetingSecretary" placeholder="Secretary" />
-        </div>
-        <div class="field-group">
-          <label>Assistant Secretary</label>
-          <input type="text" id="meetingAssistantSecretary" placeholder="Assistant Secretary" />
-        </div>
-        <div class="field-group">
-          <label>Minute Taker</label>
-          <input type="text" id="meetingMinuteTaker" placeholder="Minute Taker" />
         </div>
         <div class="field-group">
           <label>Date</label>
           <input type="date" id="meetingDate" />
         </div>
         <div class="field-group">
-          <label>Start Time</label>
+          <label>Time</label>
           <input type="time" id="meetingStartTime" />
-        </div>
-        <div class="field-group">
-          <label>End Time</label>
-          <input type="time" id="meetingEndTime" />
         </div>
         <div class="field-group">
           <label>Venue</label>
@@ -476,58 +367,11 @@
           <label>Online Meeting Link</label>
           <input type="url" id="meetingLink" placeholder="https://meet.example.com/meeting" />
         </div>
-        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-          <button class="action-btn" style="background:#4caf50; color:#fff;" onclick="saveMeetingRecord()">Save Meeting</button>
-          <button class="action-btn" style="background:#10b981; color:#fff;" onclick="sendMeetingLinkToMembers()">Send Meeting Link</button>
-        </div>
-        <div class="field-group full-width">
-          <label>Supporting Documents</label>
-          <input type="file" id="meetingAttachments" multiple />
-        </div>
       </div>
     </section>
 
     <section class="meeting-section">
-      <h2>Attendance Management</h2>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 20px;">
-        <div class="meeting-panel-card">
-          <h3>Members Present</h3>
-          <select id="meetingPresent" multiple style="min-height: 160px;"></select>
-        </div>
-        <div class="meeting-panel-card">
-          <h3>Members Absent</h3>
-          <select id="meetingAbsent" multiple style="min-height: 160px;"></select>
-        </div>
-        <div class="meeting-panel-card">
-          <h3>Absent with Apology</h3>
-          <select id="meetingApology" multiple style="min-height: 160px;"></select>
-        </div>
-        <div class="meeting-panel-card">
-          <h3>External Participants</h3>
-          <select id="meetingGuests" multiple style="min-height: 160px;"></select>
-        </div>
-      </div>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
-        <div class="field-group">
-          <label>Attendance Notes</label>
-          <textarea id="attendanceNotes" placeholder="Add arrival, departure, and confirmation notes"></textarea>
-        </div>
-      </div>
-    </section>
-
-    <section class="meeting-section">
-      <h2>Agenda Builder</h2>
-      <div class="meeting-panel-card" style="padding: 14px;">
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; align-items:center;">
-          <button class="action-btn" style="background:#00e0ff; color:#000;" onclick="addAgendaItem()">+ Add Agenda Item</button>
-          <button class="action-btn" style="background:#555;" onclick="resetAgendaItems()">Reset Agenda</button>
-        </div>
-        <div id="agendaItemsContainer" style="display:flex; flex-direction:column; gap:12px;"></div>
-      </div>
-    </section>
-
-    <section class="meeting-section">
-      <h2>Meeting Minutes Structure</h2>
+      <h2>Meeting Minutes</h2>
       <div class="section-row">
         <div class="field-group full-width">
           <label>Template</label>
@@ -536,42 +380,39 @@
             <option value="Executive">Executive Committee Meeting</option>
             <option value="Loan">Loan Committee Meeting</option>
             <option value="Finance">Finance Committee Meeting</option>
-            <option value="Savings">Savings Committee Meeting</option>
-            <option value="Staff">Staff Meeting</option>
-            <option value="Department">Department Meeting</option>
-            <option value="Emergency">Emergency Meeting</option>
             <option value="AGM">Annual General Meeting (AGM)</option>
             <option value="SGM">Special General Meeting (SGM)</option>
-            <option value="Credit">Credit Committee Meeting</option>
             <option value="Custom">Custom Template</option>
           </select>
         </div>
         <div class="field-group full-width">
-          <label>Minutes Notes</label>
-          <textarea id="minutesBody" placeholder="Meeting discussion, resolutions, action items, decisions."></textarea>
+          <label>Minutes Content</label>
+          <textarea id="minutesBody" placeholder="Meeting discussion, resolutions, action items, decisions..." style="min-height: 300px;"></textarea>
         </div>
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top: 16px;">
+        <button class="action-btn" style="background:#4caf50; color:#fff;" onclick="saveMinutesRecord()">Save Minutes</button>
+        <button class="action-btn" style="background:#0077ff;" onclick="downloadMinutesReport()">Download</button>
+        <button class="action-btn" style="background:#555;" onclick="window.print()">Print</button>
       </div>
     </section>
 
-    <section class="meeting-section" style="display: none;">
-      <h2>Meeting Records</h2>
-      <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom: 16px; align-items:center;">
-        <input id="meetingSearch" type="search" placeholder="Search meetings..." style="flex:1; min-width:220px;" oninput="filterMeetingRecords()" />
-        <select id="meetingStatusFilter" onchange="filterMeetingRecords()" style="min-width:180px;">
-          <option value="all">All Statuses</option>
-          <option value="Scheduled">Scheduled</option>
-          <option value="Pending Approval">Pending Approval</option>
-          <option value="Confirmed">Confirmed</option>
-          <option value="Completed">Completed</option>
-          <option value="Cancelled">Cancelled</option>
-        </select>
-        <button class="action-btn" style="background:#4caf50;" onclick="loadMeetingRecords()">Refresh</button>
+    <section class="meeting-section">
+      <h2>Send Meeting Link to Members</h2>
+      <div class="section-row">
+        <div class="field-group full-width">
+          <label>Select Members</label>
+          <select id="meetingLinkRecipients" multiple style="min-height: 120px;"></select>
+        </div>
+        <div class="field-group full-width">
+          <label>Message (Optional)</label>
+          <textarea id="meetingLinkMessage" placeholder="Add a custom message to send with the meeting link..." style="min-height: 80px;"></textarea>
+        </div>
       </div>
-      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding: 0 10px;">
-        <input type="checkbox" id="selectAllMeetings" onchange="toggleAllMeetingSelection(this.checked)">
-        <label for="selectAllMeetings" style="color:#e0f7ff; font-size:13px; cursor:pointer;">Select All Meetings</label>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top: 16px;">
+        <button class="action-btn" style="background:#ff9800; color:#000;" onclick="sendMeetingLinkToMembers()">📤 Send Meeting Link</button>
+        <button class="action-btn" style="background:#4caf50; color:#fff;" onclick="copyMeetingLink()">📋 Copy Link</button>
       </div>
-      <div class="meeting-cards-grid" id="meetingRecordsGrid"></div>
     </section>
   </main>
 
@@ -580,23 +421,16 @@
     const meetingCenterState = {
       allMeetings: [],
       selectedMeetingIds: new Set(),
-      agendaItems: [],
-      attendanceRecords: [],
       members: [],
       editingMeetingId: null,
       meetingTemplates: {
-        Board: 'Meeting Header\n\nMeeting Information\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information\n\nSignatures (Chairperson & Secretary)',
-        Executive: 'Meeting Header\n\nExecutive Summary\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nFinancial Discussions\n\nLoan Discussions\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
-        Loan: 'Meeting Header\n\nLoan Committee Overview\n\nAttendance Register\n\nAgenda Items\n\nLoan Discussions\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
-        Finance: 'Meeting Header\n\nFinance Review\n\nAttendance Register\n\nAgenda Items\n\nFinancial Discussions\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
-        Savings: 'Meeting Header\n\nSavings Committee Notes\n\nAttendance Register\n\nAgenda Items\n\nSavings Discussions\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
-        Staff: 'Meeting Header\n\nStaff Briefing\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
-        Department: 'Meeting Header\n\nDepartment Updates\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
-        Emergency: 'Meeting Header\n\nEmergency Response\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
-        AGM: 'Meeting Header\n\nAnnual General Meeting\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nResolutions Passed\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
-        SGM: 'Meeting Header\n\nSpecial General Meeting\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nResolutions Passed\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
-        Credit: 'Meeting Header\n\nCredit Committee Review\n\nAttendance Register\n\nAgenda Items\n\nLoan Discussions\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
-        Custom: 'Meeting Header\n\nMeeting Information\n\nAttendance Register\n\nAgenda Items\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information'
+        Board: 'Meeting Header\n\nMeeting Information\n\nAttendance Register\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information\n\nSignatures (Chairperson & Secretary)',
+        Executive: 'Meeting Header\n\nExecutive Summary\n\nAttendance Register\n\nDiscussion Summary\n\nFinancial Discussions\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        Loan: 'Meeting Header\n\nLoan Committee Overview\n\nAttendance Register\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        Finance: 'Meeting Header\n\nFinance Review\n\nAttendance Register\n\nDiscussion Summary\n\nFinancial Discussions\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        AGM: 'Meeting Header\n\nAnnual General Meeting\n\nAttendance Register\n\nDiscussion Summary\n\nResolutions Passed\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        SGM: 'Meeting Header\n\nSpecial General Meeting\n\nAttendance Register\n\nDiscussion Summary\n\nResolutions Passed\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information',
+        Custom: 'Meeting Header\n\nMeeting Information\n\nAttendance Register\n\nDiscussion Summary\n\nDecisions Made\n\nAction Items\n\nClosing Remarks\n\nNext Meeting Information'
       }
     };
 

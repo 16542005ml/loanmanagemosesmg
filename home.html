@@ -474,30 +474,12 @@
         </div>
       </div>
 
-      <!-- 2. Live Meeting Agenda Workspace -->
+      <!-- 2. Meeting Minutes Generator -->
       <div class="hub-module-card">
-        <h3>2. Live Meeting Agenda Workspace (Drag-and-Drop)</h3>
-        <p>Bind member loan packages into live evaluation tracks during meetings:</p>
-        <div class="drag-container">
-          <div class="drag-box" id="documentPool" ondragover="allowDrop(event)" ondragenter="handleDragEnter(event, 'documentPool')"
-            ondragleave="handleDragLeave(event, 'documentPool')" ondrop="handleDocumentDrop(event, 'pool')"></div>
-          <div class="drag-box" id="agendaTimeline" ondragover="allowDrop(event)" ondragenter="handleDragEnter(event, 'agendaTimeline')"
-            ondragleave="handleDragLeave(event, 'agendaTimeline')" ondrop="handleDocumentDrop(event, 'agenda')"></div>
-        </div>
-
-        <h4 style="margin-top:20px; color:#81c784;">Live Group Approval Voting Portal</h4>
-        <div
-          style="background:rgba(0,0,0,0.25); padding:15px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <div>
-            <strong id="resolutionTitle">Chama Rule Enforcement Framework</strong>
-            <div style="font-size:12px; opacity:0.7; margin-top:4px;" id="resolutionStatusSummary">Awaiting meeting vote
-              records for requested micro-finance loans...</div>
-          </div>
-          <div style="display:flex; gap:8px;">
-            <button class="btn-db" onclick="castResolutionVote('Approve')">Approve</button>
-            <button class="btn-del" style="background:#ff9800;" onclick="castResolutionVote('Abstain')">Abstain</button>
-            <button class="btn-del" onclick="castResolutionVote('Reject')">Reject</button>
-          </div>
+        <h3>2. Meeting Minutes Generator</h3>
+        <p>Generate meeting minutes with a simple interface:</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+          <button class="action-btn" style="background:#4caf50; color:#fff;" onclick="window.location.href='meeting-center.html'">📄 Open Meeting Center</button>
         </div>
       </div>
 
