@@ -47,6 +47,8 @@
     "express-rate-limit": "^7.4.0",
     "express-validator": "^7.2.1",
     "helmet": "^8.0.0",
+    "imap": "^0.8.19",
+    "mailparser": "^3.6.9",
     "multer": "^2.2.0",
     "mysql2": "^3.22.5",
     "node-cron": "^4.6.0",

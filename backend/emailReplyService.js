@@ -6,11 +6,19 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const Imap = require('imap');
-const { simpleParser } = require('mailparser');
 const path = require('path');
-
 require('dotenv').config({ path: path.join(__dirname, '.env') });
+
+// Gracefully handle missing dependencies
+let Imap, simpleParser;
+try {
+  Imap = require('imap');
+  simpleParser = require('mailparser').simpleParser;
+} catch (err) {
+  console.warn('[emailReplyService] IMAP dependencies not installed. Auto-reply disabled. Run: npm install imap mailparser');
+  Imap = null;
+  simpleParser = null;
+}
 
 // IMAP Configuration for receiving emails
 const imapConfig = {
@@ -306,6 +314,11 @@ function generateGenericReply(email) {
  * Start the email reply service
  */
 function startEmailReplyService() {
+  if (!Imap || !simpleParser) {
+    console.warn('[emailReplyService] IMAP dependencies not available - auto-reply disabled');
+    return;
+  }
+
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.warn('[emailReplyService] Email credentials not configured - auto-reply disabled');
     return;
