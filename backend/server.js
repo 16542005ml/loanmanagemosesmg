@@ -293,6 +293,14 @@ async function startServer() {
   } catch (schedulerErr) {
     console.warn('[server] Loan reminder scheduler failed to start:', schedulerErr.message);
   }
+
+  // Start automatic email reply service
+  try {
+    const { startEmailReplyService } = require('./emailReplyService');
+    startEmailReplyService();
+  } catch (replyErr) {
+    console.warn('[server] Email reply service failed to start:', replyErr.message);
+  }
 }
 
 // --- Graceful Shutdown ---

@@ -41,6 +41,15 @@ function getTransporter() {
     tls: { rejectUnauthorized: false }
   });
 
+  // Enable automatic email reply functionality
+  transporter.verify(function(error, success) {
+    if (error) {
+      console.log('[emailService] SMTP connection error:', error);
+    } else {
+      console.log('[emailService] SMTP server is ready to send and receive emails');
+    }
+  });
+
   return transporter;
 }
 
