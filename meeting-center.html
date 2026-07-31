@@ -198,6 +198,470 @@
       font-size: 11px;
       color: #cfd8fc;
     }
+    .advanced-features-container {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(0, 224, 255, 0.2);
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 24px;
+    }
+    .advanced-features-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(0, 224, 255, 0.15);
+    }
+    .advanced-features-header h2 {
+      margin: 0;
+      color: #00e0ff;
+      font-size: 1.3rem;
+    }
+    .advanced-features-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .advanced-tab {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #a3dafe;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .advanced-tab:hover {
+      background: rgba(0, 224, 255, 0.1);
+      border-color: rgba(0, 224, 255, 0.3);
+    }
+    .advanced-tab.active {
+      background: linear-gradient(90deg, rgba(0, 224, 255, 0.2), rgba(0, 119, 255, 0.2));
+      border-color: #00e0ff;
+      color: #fff;
+    }
+    .advanced-feature-panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .advanced-feature-panel.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .feature-subsection {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .feature-subsection h3 {
+      margin: 0 0 12px;
+      color: #e0f7ff;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .feature-subsection h3 i {
+      color: #00e0ff;
+    }
+    .permission-tier {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .permission-tier label {
+      flex: 1;
+      font-size: 13px;
+      color: #dfe7ff;
+    }
+    .permission-tier select {
+      width: auto;
+      min-width: 120px;
+    }
+    .hyperlink-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .hyperlink-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+    }
+    .hyperlink-item a {
+      color: #00e0ff;
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .hyperlink-item a:hover {
+      text-decoration: underline;
+    }
+    .version-log {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .version-entry {
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 12px;
+    }
+    .version-entry:last-child {
+      border-bottom: none;
+    }
+    .version-entry .timestamp {
+      color: #a3dafe;
+      font-size: 11px;
+    }
+    .version-entry .editor {
+      color: #4caf50;
+      font-weight: 600;
+    }
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+    }
+    .checkbox-item input[type="checkbox"] {
+      width: auto;
+      cursor: pointer;
+    }
+    .checkbox-item label {
+      font-size: 12px;
+      color: #dfe7ff;
+      cursor: pointer;
+    }
+    .okr-mapping {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .okr-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: rgba(0, 224, 255, 0.08);
+      border-left: 3px solid #00e0ff;
+      border-radius: 6px;
+    }
+    .okr-item span {
+      font-size: 13px;
+      color: #e0f7ff;
+    }
+    .success-criteria {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .criteria-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: rgba(76, 175, 80, 0.08);
+      border-left: 3px solid #4caf50;
+      border-radius: 6px;
+    }
+    .criteria-item input {
+      flex: 1;
+      font-size: 13px;
+    }
+    .agenda-item {
+      display: grid;
+      grid-template-columns: 40px 1fr auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .agenda-item .drag-handle {
+      color: #666;
+      cursor: move;
+    }
+    .agenda-item input {
+      font-size: 13px;
+    }
+    .agenda-item .time-input {
+      width: 80px;
+    }
+    .agenda-item .owner-select {
+      width: 120px;
+    }
+    .timer-display {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: rgba(255, 193, 7, 0.15);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      border-radius: 6px;
+      color: #ffc107;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .parking-lot {
+      background: rgba(156, 39, 176, 0.08);
+      border: 1px dashed rgba(156, 39, 176, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .parking-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .parking-item:last-child {
+      margin-bottom: 0;
+    }
+    .sentiment-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .sentiment-blocker {
+      background: rgba(244, 67, 54, 0.15);
+      color: #f44336;
+      border: 1px solid rgba(244, 67, 54, 0.3);
+    }
+    .sentiment-risk {
+      background: rgba(255, 152, 0, 0.15);
+      color: #ff9800;
+      border: 1px solid rgba(255, 152, 0, 0.3);
+    }
+    .sentiment-innovation {
+      background: rgba(76, 175, 80, 0.15);
+      color: #4caf50;
+      border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+    .artifact-preview {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .artifact-icon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 224, 255, 0.15);
+      border-radius: 8px;
+      color: #00e0ff;
+    }
+    .qa-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .qa-question {
+      font-size: 13px;
+      color: #e0f7ff;
+      font-style: italic;
+    }
+    .qa-answer {
+      font-size: 12px;
+      color: #a3dafe;
+      padding-left: 16px;
+      border-left: 2px solid #00e0ff;
+    }
+    .executive-summary {
+      background: linear-gradient(135deg, rgba(0, 224, 255, 0.1), rgba(0, 119, 255, 0.1));
+      border: 1px solid rgba(0, 224, 255, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .executive-summary p {
+      margin: 0;
+      font-size: 14px;
+      color: #e0f7ff;
+      line-height: 1.6;
+    }
+    .decision-log {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .decision-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(76, 175, 80, 0.08);
+      border-left: 3px solid #4caf50;
+      border-radius: 6px;
+    }
+    .decision-item .decision-time {
+      font-size: 11px;
+      color: #a3dafe;
+      min-width: 60px;
+    }
+    .decision-item .decision-text {
+      flex: 1;
+      font-size: 13px;
+      color: #e0f7ff;
+    }
+    .task-matrix {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .task-item {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+    }
+    .task-item .task-name {
+      font-size: 13px;
+      color: #e0f7ff;
+    }
+    .task-item .task-owner {
+      font-size: 12px;
+      color: #a3dafe;
+    }
+    .task-item .status-select {
+      width: 120px;
+    }
+    .sync-flag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    .sync-flag.synced {
+      background: rgba(76, 175, 80, 0.15);
+      color: #4caf50;
+    }
+    .sync-flag.pending {
+      background: rgba(255, 152, 0, 0.15);
+      color: #ff9800;
+    }
+    .recording-section {
+      background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(233, 30, 99, 0.1));
+      border: 1px solid rgba(244, 67, 54, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .recording-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .record-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .record-btn.recording {
+      background: #f44336;
+      color: #fff;
+      animation: pulse 1.5s infinite;
+    }
+    .record-btn.not-recording {
+      background: #4caf50;
+      color: #fff;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    .recordings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .recording-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+    }
+    .recording-item .recording-info {
+      flex: 1;
+    }
+    .recording-item .recording-name {
+      font-size: 13px;
+      color: #e0f7ff;
+      font-weight: 600;
+    }
+    .recording-item .recording-duration {
+      font-size: 11px;
+      color: #a3dafe;
+    }
+    .recording-item .recording-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .recording-item button {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .recording-item .play-btn {
+      background: #00e0ff;
+      color: #000;
+    }
+    .recording-item .delete-btn {
+      background: #f44336;
+      color: #fff;
+    }
     .meeting-cards-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -414,6 +878,385 @@
         <button class="action-btn" style="background:#4caf50; color:#fff;" onclick="copyMeetingLink()">📋 Copy Link</button>
       </div>
     </section>
+
+    <!-- Advanced Meeting Features Container -->
+    <div class="advanced-features-container">
+      <div class="advanced-features-header">
+        <h2>Advanced Meeting Features</h2>
+        <div class="timer-display" id="meetingTimer">
+          <i class="fas fa-clock"></i> <span id="timerDisplay">00:00:00</span>
+        </div>
+      </div>
+      
+      <div class="advanced-features-tabs">
+        <button class="advanced-tab active" onclick="switchAdvancedTab('metadata')">Metadata & Access</button>
+        <button class="advanced-tab" onclick="switchAdvancedTab('context')">Context & Objectives</button>
+        <button class="advanced-tab" onclick="switchAdvancedTab('agenda')">Agenda & Timekeeping</button>
+        <button class="advanced-tab" onclick="switchAdvancedTab('discussion')">Discussion & Content</button>
+        <button class="advanced-tab" onclick="switchAdvancedTab('ai')">AI Summary</button>
+        <button class="advanced-tab" onclick="switchAdvancedTab('action')">Action Plan</button>
+        <button class="advanced-tab" onclick="switchAdvancedTab('recording')">Recording</button>
+      </div>
+
+      <!-- Metadata & Access Control -->
+      <div id="panel-metadata" class="advanced-feature-panel active">
+        <div class="feature-subsection">
+          <h3><i class="fas fa-shield-alt"></i> Access Permissions</h3>
+          <div class="permission-tier">
+            <label>View Access</label>
+            <select>
+              <option>All Members</option>
+              <option>Board Only</option>
+              <option>Executive Committee</option>
+              <option>Admin Only</option>
+            </select>
+          </div>
+          <div class="permission-tier">
+            <label>Edit Access</label>
+            <select>
+              <option>Chairperson & Secretary</option>
+              <option>Board Members</option>
+              <option>Admin Only</option>
+            </select>
+          </div>
+          <div class="permission-tier">
+            <label>Comment Access</label>
+            <select>
+              <option>All Attendees</option>
+              <option>Board Members</option>
+              <option>Read Only</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="feature-subsection">
+          <h3><i class="fas fa-link"></i> Hyperlinked Directory</h3>
+          <div class="hyperlink-list" id="hyperlinkList">
+            <div class="hyperlink-item">
+              <a href="#" target="_blank">John Doe - Profile</a>
+              <button class="action-btn" style="padding:4px 8px; font-size:11px;">Edit</button>
+            </div>
+            <div class="hyperlink-item">
+              <a href="mailto:john@example.com">john@example.com</a>
+            </div>
+          </div>
+          <button class="action-btn" style="margin-top:10px; font-size:12px;">+ Add Participant Link</button>
+        </div>
+
+        <div class="feature-subsection">
+          <h3><i class="fas fa-video"></i> Recording Links</h3>
+          <div class="field-group">
+            <label>Video Recording URL</label>
+            <input type="url" placeholder="https://cloud-storage.com/recording..." />
+          </div>
+          <div class="field-group">
+            <label>Audio Track URL</label>
+            <input type="url" placeholder="https://cloud-storage.com/audio..." />
+          </div>
+          <div class="field-group">
+            <label>AI Transcript URL</label>
+            <input type="url" placeholder="https://cloud-storage.com/transcript..." />
+          </div>
+        </div>
+
+        <div class="feature-subsection">
+          <h3><i class="fas fa-history"></i> Version History</h3>
+          <div class="version-log" id="versionLog">
+            <div class="version-entry">
+              <span class="timestamp">2026-07-31 14:30</span>
+              <span class="editor">Admin</span>
+              <span>Created meeting document</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Context & Objectives -->
+      <div id="panel-context" class="advanced-feature-panel">
+        <div class="feature-subsection">
+          <h3><i class="fas fa-check-circle"></i> Pre-Read Verification</h3>
+          <div class="checkbox-grid" id="prereadCheckboxes">
+            <div class="checkbox-item">
+              <input type="checkbox" id="preread1" />
+              <label for="preread1">Board Packet Review</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="preread2" />
+              <label for="preread2">Financial Reports</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="preread3" />
+              <label for="preread3">Previous Minutes</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="preread4" />
+              <label for="preread4">Agenda Preview</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-subsection">
+          <h3><i class="fas fa-bullseye"></i> Strategic Alignment (OKRs)</h3>
+          <div class="okr-mapping" id="okrMapping">
+            <div class="okr-item">
+              <i class="fas fa-flag"></i>
+              <span>OKR1: Increase loan portfolio by 25%</span>
+            </div>
+            <div class="okr-item">
+              <i class="fas fa-flag"></i>
+              <span>OKR2: Improve member satisfaction to 90%</span>
+            </div>
+          </div>
+          <button class="action-btn" style="margin-top:10px; font-size:12px;">+ Link OKR</button>
+        </div>
+
+        <div class="feature-subsection">
+          <h3><i class="fas fa-chart-line"></i> Success Criteria</h3>
+          <div class="success-criteria" id="successCriteria">
+            <div class="criteria-item">
+              <input type="text" placeholder="Define success metric..." value="Approve 5 new loan applications" />
+              <button class="action-btn" style="padding:4px 8px; font-size:11px;">✓</button>
+            </div>
+            <div class="criteria-item">
+              <input type="text" placeholder="Define success metric..." value="Set quarterly savings target" />
+              <button class="action-btn" style="padding:4px 8px; font-size:11px;">✓</button>
+            </div>
+          </div>
+          <button class="action-btn" style="margin-top:10px; font-size:12px;">+ Add Success Criterion</button>
+        </div>
+      </div>
+
+      <!-- Dynamic Agenda & Timekeeping -->
+      <div id="panel-agenda" class="advanced-feature-panel">
+        <div class="feature-subsection">
+          <h3><i class="fas fa-list-ol"></i> Dynamic Agenda</h3>
+          <div id="agendaList">
+            <div class="agenda-item">
+              <span class="drag-handle">☰</span>
+              <input type="text" value="Opening remarks & attendance" />
+              <input type="time" class="time-input" value="09:00" />
+              <select class="owner-select">
+                <option>Chairperson</option>
+                <option>Secretary</option>
+                <option>Treasurer</option>
+              </select>
+              <button class="action-btn" style="padding:4px 8px; font-size:11px;">×</button>
+            </div>
+            <div class="agenda-item">
+              <span class="drag-handle">☰</span>
+              <input type="text" value="Financial review" />
+              <input type="time" class="time-input" value="09:15" />
+              <select class="owner-select">
+                <option>Treasurer</option>
+                <option>Chairperson</option>
+                <option>Secretary</option>
+              </select>
+              <button class="action-btn" style="padding:4px 8px; font-size:11px;">×</button>
+            </div>
+          </div>
+          <button class="action-btn" style="margin-top:10px; font-size:12px;">+ Add Agenda Item</button>
+        </div>
+
+        <div class="feature-subsection">
+          <h3><i class="fas fa-stopwatch"></i> Pacing Indicators</h3>
+          <div style="display:flex; gap:12px; align-items:center;">
+            <button class="action-btn" style="background:#ffc107; color:#000;" onclick="startTimer()">▶ Start Timer</button>
+            <button class="action-btn" style="background:#f44336;" onclick="stopTimer()">⏸ Stop Timer</button>
+            <button class="action-btn" style="background:#555;" onclick="resetTimer()">↺ Reset</button>
+          </div>
+          <div style="margin-top:12px; font-size:12px; color:#aaa;">
+            Current topic time: <span id="topicTimer">00:00</span> | Allocated: 15 min
+          </div>
+        </div>
+
+        <div class="feature-subsection">
+          <h3><i class="fas fa-parking"></i> Parking Lot</h3>
+          <div class="parking-lot" id="parkingLot">
+            <div class="parking-item">
+              <span>Review new investment opportunity</span>
+              <button class="action-btn" style="padding:4px 8px; font-size:11px;">Address</button>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <input type="text" placeholder="Add off-topic idea..." style="flex:1;" />
+            <button class="action-btn" style="font-size:12px;">+ Add</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Discussion & Content Capture -->
+      <div id="panel-discussion" class="advanced-feature-panel">
+        <div class="feature-subsection">
+          <h3><i class="fas fa-chart-pie"></i> Live Sentiment Tracking</h3>
+          <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <span class="sentiment-tag sentiment-blocker">Blocker: 2</span>
+            <span class="sentiment-tag sentiment-risk">Risk: 1</span>
+            <span class="sentiment-tag sentiment-innovation">Innovation: 3</span>
+          </div>
+          <div style="font-size:12px; color:#aaa;">Based on poll results and word cloud analysis</div>
+        </div>
+
+        <div class="feature-subsection">
+          <h3><i class="fas fa-puzzle-piece"></i> Embedded Artifacts</h3>
+          <div class="artifact-preview">
+            <div class="artifact-icon"><i class="fab fa-figma"></i></div>
+            <div>
+              <div style="font-weight:600; font-size:13px; color:#e0f7ff;">Dashboard Design</div>
+              <div style="font-size:11px; color:#a3dafe;">Figma - Updated 2h ago</div>
+            </div>
+            <button class="action-btn" style="padding:4px 8px; font-size:11px;">Open</button>
+          </div>
+          <div class="artifact-preview">
+            <div class="artifact-icon"><i class="fab fa-jira"></i></div>
+            <div>
+              <div style="font-weight:600; font-size:13px; color:#e0f7ff;">Loan Approval Workflow</div>
+              <div style="font-size:11px; color:#a3dafe;">Jira - 3 tasks linked</div>
+            </div>
+            <button class="action-btn" style="padding:4px 8px; font-size:11px;">Open</button>
+          </div>
+          <button class="action-btn" style="font-size:12px;">+ Embed Artifact</button>
+        </div>
+
+        <div class="feature-subsection">
+          <h3><i class="fas fa-question-circle"></i> Anonymized Q&A</h3>
+          <div id="qaList">
+            <div class="qa-item">
+              <div class="qa-question">"What is the timeline for the new loan system?"</div>
+              <div class="qa-answer">Target launch: Q4 2026, pending board approval.</div>
+            </div>
+            <div class="qa-item">
+              <div class="qa-question">"How will interest rates be affected?"</div>
+              <div class="qa-answer">Rates will remain at current levels for H2 2026.</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <input type="text" placeholder="Submit anonymous question..." style="flex:1;" />
+            <button class="action-btn" style="font-size:12px;">Submit</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Automated AI Summary Elements -->
+      <div id="panel-ai" class="advanced-feature-panel">
+        <div class="feature-subsection">
+          <h3><i class="fas fa-robot"></i> Executive Summary</h3>
+          <div class="executive-summary">
+            <p>The board approved the Q3 financial report showing 15% growth in loan disbursements. Key decisions included expanding the loan product line and implementing new risk assessment protocols. Action items assigned to the treasurer for implementation by next quarter.</p>
+          </div>
+          <button class="action-btn" style="font-size:12px;">🔄 Regenerate Summary</button>
+        </div>
+
+        <div class="feature-subsection">
+          <h3><i class="fas fa-gavel"></i> Key Decisions Log</h3>
+          <div class="decision-log" id="decisionLog">
+            <div class="decision-item">
+              <span class="decision-time">09:45</span>
+              <span class="decision-text">Approved new loan product launch for Q4 2026</span>
+            </div>
+            <div class="decision-item">
+              <span class="decision-time">10:30</span>
+              <span class="decision-text">Authorized budget increase for IT infrastructure</span>
+            </div>
+            <div class="decision-item">
+              <span class="decision-time">11:15</span>
+              <span class="decision-text">Confirmed quarterly savings target of KES 5M</span>
+            </div>
+          </div>
+          <button class="action-btn" style="margin-top:10px; font-size:12px;">+ Log Decision</button>
+        </div>
+
+        <div class="feature-subsection">
+          <h3><i class="fas fa-tags"></i> Sentiment Tags</h3>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <span class="sentiment-tag sentiment-blocker">Blocker: Budget constraints</span>
+            <span class="sentiment-tag sentiment-risk">Risk: Market volatility</span>
+            <span class="sentiment-tag sentiment-innovation">Innovation: Digital transformation</span>
+          </div>
+          <button class="action-btn" style="margin-top:10px; font-size:12px;">+ Add Tag</button>
+        </div>
+      </div>
+
+      <!-- Accountable Action Plan -->
+      <div id="panel-action" class="advanced-feature-panel">
+        <div class="feature-subsection">
+          <h3><i class="fas fa-tasks"></i> Task Matrix</h3>
+          <div class="task-matrix" id="taskMatrix">
+            <div class="task-item">
+              <span class="task-name">Implement new loan approval workflow</span>
+              <span class="task-owner">Treasurer</span>
+              <select class="status-select">
+                <option>In Progress</option>
+                <option>Not Started</option>
+                <option>Blocked</option>
+                <option>Completed</option>
+              </select>
+              <span class="sync-flag synced"><i class="fas fa-check"></i> Synced</span>
+            </div>
+            <div class="task-item">
+              <span class="task-name">Prepare Q4 financial projections</span>
+              <span class="task-owner">Secretary</span>
+              <select class="status-select">
+                <option>Not Started</option>
+                <option>In Progress</option>
+                <option>Blocked</option>
+                <option>Completed</option>
+              </select>
+              <span class="sync-flag pending"><i class="fas fa-clock"></i> Pending</span>
+            </div>
+          </div>
+          <button class="action-btn" style="margin-top:10px; font-size:12px;">+ Add Task</button>
+        </div>
+
+        <div class="feature-subsection">
+          <h3><i class="fas fa-sync-alt"></i> System Sync Flags</h3>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <span class="sync-flag synced"><i class="fas fa-check"></i> Asana: 3 tasks synced</span>
+            <span class="sync-flag synced"><i class="fas fa-check"></i> Monday.com: 2 tasks synced</span>
+            <span class="sync-flag pending"><i class="fas fa-clock"></i> Jira: 1 pending</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recording Section -->
+      <div id="panel-recording" class="advanced-feature-panel">
+        <div class="recording-section">
+          <h3 style="margin:0 0 16px; color:#e0f7ff;"><i class="fas fa-microphone"></i> Meeting Recording</h3>
+          <div class="recording-controls">
+            <button id="recordBtn" class="record-btn not-recording" onclick="toggleRecording()">
+              <i class="fas fa-circle"></i> <span id="recordBtnText">Start Recording</span>
+            </button>
+            <div style="font-size:12px; color:#aaa;">
+              <span id="recordingStatus">Not recording</span>
+              <span id="recordingDuration" style="margin-left:12px;">00:00:00</span>
+            </div>
+          </div>
+          
+          <h4 style="margin:16px 0 12px; color:#a3dafe; font-size:14px;">Recordings</h4>
+          <div class="recordings-list" id="recordingsList">
+            <div class="recording-item">
+              <div class="recording-info">
+                <div class="recording-name">Board Meeting - 2026-07-31</div>
+                <div class="recording-duration">Duration: 01:23:45</div>
+              </div>
+              <div class="recording-actions">
+                <button class="play-btn" onclick="playRecording(1)"><i class="fas fa-play"></i> Play</button>
+                <button class="delete-btn" onclick="deleteRecording(1)"><i class="fas fa-trash"></i> Delete</button>
+              </div>
+            </div>
+            <div class="recording-item">
+              <div class="recording-info">
+                <div class="recording-name">Finance Committee - 2026-07-28</div>
+                <div class="recording-duration">Duration: 00:45:30</div>
+              </div>
+              <div class="recording-actions">
+                <button class="play-btn" onclick="playRecording(2)"><i class="fas fa-play"></i> Play</button>
+                <button class="delete-btn" onclick="deleteRecording(2)"><i class="fas fa-trash"></i> Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script src="js/home.js"></script>
@@ -456,6 +1299,217 @@
         console.error('Failed to load members:', e);
       }
     }
+
+    // Advanced Features Tab Switching
+    function switchAdvancedTab(tabName) {
+      // Remove active class from all tabs
+      document.querySelectorAll('.advanced-tab').forEach(tab => tab.classList.remove('active'));
+      // Hide all panels
+      document.querySelectorAll('.advanced-feature-panel').forEach(panel => panel.classList.remove('active'));
+      
+      // Activate selected tab
+      const activeTab = document.querySelector(`.advanced-tab[onclick="switchAdvancedTab('${tabName}')"]`);
+      if (activeTab) activeTab.classList.add('active');
+      
+      // Show selected panel
+      const activePanel = document.getElementById(`panel-${tabName}`);
+      if (activePanel) activePanel.classList.add('active');
+    }
+
+    // Timer Functionality
+    let meetingTimerInterval = null;
+    let meetingTimerSeconds = 0;
+    let topicTimerInterval = null;
+    let topicTimerSeconds = 0;
+
+    function startTimer() {
+      if (meetingTimerInterval) return;
+      meetingTimerInterval = setInterval(() => {
+        meetingTimerSeconds++;
+        updateTimerDisplay();
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (meetingTimerInterval) {
+        clearInterval(meetingTimerInterval);
+        meetingTimerInterval = null;
+      }
+    }
+
+    function resetTimer() {
+      stopTimer();
+      meetingTimerSeconds = 0;
+      updateTimerDisplay();
+    }
+
+    function updateTimerDisplay() {
+      const hours = Math.floor(meetingTimerSeconds / 3600);
+      const minutes = Math.floor((meetingTimerSeconds % 3600) / 60);
+      const seconds = meetingTimerSeconds % 60;
+      const display = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      const timerDisplay = document.getElementById('timerDisplay');
+      if (timerDisplay) timerDisplay.textContent = display;
+    }
+
+    // Topic Timer
+    function startTopicTimer() {
+      if (topicTimerInterval) return;
+      topicTimerInterval = setInterval(() => {
+        topicTimerSeconds++;
+        updateTopicTimerDisplay();
+      }, 1000);
+    }
+
+    function stopTopicTimer() {
+      if (topicTimerInterval) {
+        clearInterval(topicTimerInterval);
+        topicTimerInterval = null;
+      }
+    }
+
+    function resetTopicTimer() {
+      stopTopicTimer();
+      topicTimerSeconds = 0;
+      updateTopicTimerDisplay();
+    }
+
+    function updateTopicTimerDisplay() {
+      const minutes = Math.floor(topicTimerSeconds / 60);
+      const seconds = topicTimerSeconds % 60;
+      const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      const topicTimer = document.getElementById('topicTimer');
+      if (topicTimer) topicTimer.textContent = display;
+    }
+
+    // Recording Functionality
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let isRecording = false;
+    let recordingStartTime = null;
+    let recordingInterval = null;
+    let recordings = [];
+
+    async function toggleRecording() {
+      const recordBtn = document.getElementById('recordBtn');
+      const recordBtnText = document.getElementById('recordBtnText');
+      const recordingStatus = document.getElementById('recordingStatus');
+      const recordingDuration = document.getElementById('recordingDuration');
+
+      if (!isRecording) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream);
+          recordedChunks = [];
+
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              recordedChunks.push(event.data);
+            }
+          };
+
+          mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+            const url = URL.createObjectURL(blob);
+            const duration = Date.now() - recordingStartTime;
+            
+            recordings.push({
+              id: Date.now(),
+              name: `Meeting Recording - ${new Date().toLocaleDateString()}`,
+              url: url,
+              duration: formatDuration(duration),
+              blob: blob
+            });
+
+            updateRecordingsList();
+            stream.getTracks().forEach(track => track.stop());
+          };
+
+          mediaRecorder.start();
+          isRecording = true;
+          recordingStartTime = Date.now();
+
+          recordBtn.classList.remove('not-recording');
+          recordBtn.classList.add('recording');
+          recordBtnText.textContent = 'Stop Recording';
+          recordingStatus.textContent = 'Recording...';
+
+          recordingInterval = setInterval(() => {
+            const elapsed = Date.now() - recordingStartTime;
+            recordingDuration.textContent = formatDuration(elapsed);
+          }, 1000);
+
+        } catch (err) {
+          console.error('Error accessing microphone:', err);
+          alert('Could not access microphone. Please ensure microphone permissions are granted.');
+        }
+      } else {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+        isRecording = false;
+
+        recordBtn.classList.remove('recording');
+        recordBtn.classList.add('not-recording');
+        recordBtnText.textContent = 'Start Recording';
+        recordingStatus.textContent = 'Not recording';
+
+        if (recordingInterval) {
+          clearInterval(recordingInterval);
+          recordingInterval = null;
+        }
+      }
+    }
+
+    function formatDuration(ms) {
+      const seconds = Math.floor(ms / 1000);
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function updateRecordingsList() {
+      const recordingsList = document.getElementById('recordingsList');
+      if (!recordingsList) return;
+
+      recordingsList.innerHTML = recordings.map(rec => `
+        <div class="recording-item">
+          <div class="recording-info">
+            <div class="recording-name">${rec.name}</div>
+            <div class="recording-duration">Duration: ${rec.duration}</div>
+          </div>
+          <div class="recording-actions">
+            <button class="play-btn" onclick="playRecording(${rec.id})"><i class="fas fa-play"></i> Play</button>
+            <button class="delete-btn" onclick="deleteRecording(${rec.id})"><i class="fas fa-trash"></i> Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function playRecording(id) {
+      const recording = recordings.find(r => r.id === id);
+      if (recording && recording.url) {
+        const audio = new Audio(recording.url);
+        audio.play();
+      }
+    }
+
+    function deleteRecording(id) {
+      if (!confirm('Are you sure you want to delete this recording?')) return;
+      
+      const recording = recordings.find(r => r.id === id);
+      if (recording) {
+        URL.revokeObjectURL(recording.url);
+        recordings = recordings.filter(r => r.id !== id);
+        updateRecordingsList();
+      }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadMeetingMembers();
+    });
 
     // Apply template to minutes body
     function applyMinutesTemplate() {
