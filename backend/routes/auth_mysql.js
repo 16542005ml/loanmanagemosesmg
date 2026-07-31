@@ -4,7 +4,7 @@ const { sequelize } = require('../models');
 const bcrypt = require('bcryptjs');
 const { signAdminToken } = require('../adminContext');
 const { registerRules, loginRules } = require('../validation');
-const { sendEmail, templates } = require('../services/emailService');
+const { sendEmail, emailTemplates } = require('../emailService');
 
 (async () => {
     try {

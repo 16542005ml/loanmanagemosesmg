@@ -210,13 +210,14 @@ async function runMonthlyStatements() {
 
     const members = await sequelize.query(
       `SELECT am.id, am.full_name, am.email, am.admin_id,
-              am.loanAmount, am.savingsAmount,
               a.email AS admin_email, a.full_name AS admin_name
        FROM approved_members am
        LEFT JOIN admins a ON a.id = am.admin_id
        WHERE am.email IS NOT NULL AND am.email != ''`,
       { type: sequelize.QueryTypes.SELECT }
     );
+
+    const month = new Date().toLocaleDateString('en-KE', { month: 'long', year: 'numeric' });
 
     for (const m of members) {
       try {
@@ -230,29 +231,74 @@ async function runMonthlyStatements() {
           { type: sequelize.QueryTypes.SELECT, replacements: { id: m.id } }
         );
 
-        const month = new Date().toLocaleDateString('en-KE', { month: 'long', year: 'numeric' });
-        const subject = `📊 Your Monthly Statement — ${month}`;
-        const html = require('./emailService').emailTemplates ? null : null; // use inline below
-
-        // Build a simple monthly summary email
-        const { emailWrapper } = (() => {
-          // Access the wrapper via the module (already in scope via emailService)
-          return {};
-        })();
-
-        const [subj, htmlBody] = require('./emailService').emailTemplates.contributionReceipt({
-          memberName: m.full_name,
-          amount: m.savingsAmount || 0,
-          paymentMethod: 'Monthly Summary',
-          contributionId: `STMT-${new Date().toISOString().slice(0,7)}`,
-          date: new Date().toISOString()
-        });
+        const [contributions] = await sequelize.query(
+          `SELECT COALESCE(SUM(amount), 0) AS total_contributions
+           FROM contributions WHERE member_id = :id`,
+          { type: sequelize.QueryTypes.SELECT, replacements: { id: m.id } }
+        );
 
         const adminFrom = m.admin_email
           ? { fromEmail: m.admin_email, fromName: m.admin_name || 'System Admin' }
           : {};
 
-        await require('./emailService').sendEmail(m.email, `📊 Monthly Statement — ${month}`, htmlBody, null, adminFrom);
+        // Build a custom monthly statement email
+        const subject = `📊 Your Monthly Statement — ${month}`;
+        const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Monthly Statement</title>
+  <style>
+    body { margin: 0; padding: 0; background: #f0f4f8; font-family: 'Segoe UI', Arial, sans-serif; }
+    .wrapper { max-width: 600px; margin: 32px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, #1a3a5c 0%, #2563eb 100%); padding: 32px 40px; text-align: center; }
+    .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 700; }
+    .header p { margin: 8px 0 0; color: rgba(255,255,255,0.8); font-size: 13px; }
+    .body { padding: 36px 40px; color: #1e293b; line-height: 1.7; font-size: 15px; }
+    .body h2 { margin: 0 0 16px; font-size: 18px; color: #1a3a5c; }
+    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px 24px; margin: 20px 0; }
+    .card table { width: 100%; border-collapse: collapse; }
+    .card td { padding: 6px 0; font-size: 14px; }
+    .card td:first-child { color: #64748b; width: 40%; }
+    .card td:last-child { font-weight: 600; color: #0f172a; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .badge-success { background: #dcfce7; color: #16a34a; }
+    .badge-warning { background: #fef9c3; color: #d97706; }
+    .badge-danger { background: #fee2e2; color: #dc2626; }
+    .footer { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 40px; text-align: center; font-size: 12px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <h1>🏦 Loan Management System</h1>
+      <p>Monthly Statement — ${month}</p>
+    </div>
+    <div class="body">
+      <h2>Dear ${m.full_name},</h2>
+      <p>Here is your monthly financial summary:</p>
+      <div class="card">
+        <table>
+          <tr><td>Total Loans</td><td>${loans.total || 0}</td></tr>
+          <tr><td>Active Loans</td><td><span class="badge badge-success">${loans.active || 0}</span></td></tr>
+          <tr><td>Overdue Loans</td><td><span class="badge ${loans.overdue > 0 ? 'badge-danger' : 'badge-success'}">${loans.overdue || 0}</span></td></tr>
+          <tr><td>Settled Loans</td><td><span class="badge badge-success">${loans.settled || 0}</span></td></tr>
+          <tr><td>Total Loan Amount</td><td>KES ${(loans.total_amount || 0).toLocaleString('en-KE')}</td></tr>
+          <tr><td>Total Contributions</td><td>KES ${(contributions.total_contributions || 0).toLocaleString('en-KE')}</td></tr>
+        </table>
+      </div>
+      <p>Please log in to the Member Portal to view detailed information about your loans and contributions.</p>
+    </div>
+    <div class="footer">
+      <p>This is an automated message from the Loan Management System. Please do not reply.</p>
+      <p>© ${new Date().getFullYear()} Loan Management System. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+        await sendEmail(m.email, subject, html, null, adminFrom);
         console.log(`[emailScheduler] Monthly statement → ${m.email}`);
       } catch (e) {
         console.warn(`[emailScheduler] Monthly statement failed for ${m.email}:`, e.message);

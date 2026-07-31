@@ -4,7 +4,7 @@ const { Contribution, Member, sequelize } = require('../models');
 const { getAdminFromRequest, requireAdmin, getFallbackAdminId, getMemberFromRequest } = require('../adminContext');
 const { contributionCreateRules } = require('../validation');
 const { upload, handleUploadError } = require('../uploadValidation');
-const { sendEmail, templates } = require('../services/emailService');
+const { sendEmail, emailTemplates } = require('../emailService');
 const { logAdminAction } = require('./live_updates_mysql');
 
 const router = express.Router();
@@ -77,20 +77,15 @@ router.post('/create', upload.single('receipt'), contributionCreateRules, handle
       if (memberEmail) {
         const receiptNumber = `CNT-${new Date().toISOString().slice(0,10).replace(/-/g, '')}-${String(contribution.id).padStart(3, '0')}`;
         const adminName = admin?.full_name || admin?.name || 'System Admin';
-        const html = templates.contributionReceipt({
-          name: memberName,
-          receiptNumber,
+        const [subject, html] = emailTemplates.contributionReceipt({
+          memberName: memberName,
           amount: Number(amount),
           paymentMethod: payment_method || 'Not specified',
-          date: new Date().toLocaleDateString(),
-          status: 'Confirmed',
-          recordedBy: adminName
+          contributionId: receiptNumber,
+          date: new Date().toISOString()
         });
-        sendEmail({
-          to: memberEmail,
-          subject: 'Contribution Receipt - Loan Management System',
-          html
-        }).catch(() => {});
+        const adminFrom = admin?.email ? { fromEmail: admin.email, fromName: adminName } : {};
+        sendEmail(memberEmail, subject, html, null, adminFrom).catch(() => {});
 
         // Log admin action to live updates
         await logAdminAction(

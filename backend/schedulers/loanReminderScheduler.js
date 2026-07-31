@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { sequelize } = require('../models');
-const { sendEmail, templates } = require('../services/emailService');
+const { sendEmail, emailTemplates } = require('../emailService');
 
 /**
  * Loan Repayment Reminder Scheduler
@@ -53,19 +53,16 @@ async function checkAndSendLoanReminders() {
 
       // Only send reminders at specific intervals: 3 days, 7 days, 14 days
       if ([3, 7, 14].includes(diffDays)) {
-        const html = templates.loanRepaymentReminder({
-          name: loan.full_name || loan.borrower_name,
+        const [subject, html] = emailTemplates.repaymentReminder({
+          memberName: loan.full_name || loan.borrower_name,
+          amount: loan.amount,
+          dueDate: loan.due_date,
           loanId: loan.id,
-          outstandingBalance: Math.max(0, outstandingBalance),
-          dueDate: dueDate.toLocaleDateString(),
-          daysRemaining: diffDays
+          daysLeft: diffDays,
+          outstanding: Math.max(0, outstandingBalance)
         });
 
-        const result = await sendEmail({
-          to: loan.email,
-          subject: `Loan Repayment Reminder - Due in ${diffDays} days`,
-          html
-        });
+        const result = await sendEmail(loan.email, subject, html);
 
         if (result.success) {
           emailsSent++;
@@ -124,19 +121,15 @@ async function checkAndSendOverdueNotifications() {
       
       const outstandingBalance = totalOwed - (repaymentResult.total_repaid || 0);
 
-      const html = templates.loanRepaymentReminder({
-        name: loan.full_name || loan.borrower_name,
+      const [subject, html] = emailTemplates.loanOverdue({
+        memberName: loan.full_name || loan.borrower_name,
+        amount: loan.amount,
+        dueDate: loan.due_date,
         loanId: loan.id,
-        outstandingBalance: Math.max(0, outstandingBalance),
-        dueDate: dueDate.toLocaleDateString(),
-        daysRemaining: `OVERDUE by ${diffDays}`
+        daysOverdue: diffDays
       });
 
-      const result = await sendEmail({
-        to: loan.email,
-        subject: `URGENT: Loan Payment Overdue - ${diffDays} days`,
-        html
-      });
+      const result = await sendEmail(loan.email, subject, html);
 
       if (result.success) {
         emailsSent++;

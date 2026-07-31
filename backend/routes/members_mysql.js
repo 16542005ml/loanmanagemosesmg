@@ -7,7 +7,7 @@ const { getAdminFromRequest, getMemberFromRequest, requireAdmin, getFallbackAdmi
 const { signMemberToken } = require('../adminContext');
 const { Op } = require('sequelize');
 const { memberCreateRules } = require('../validation');
-const { sendEmail, templates } = require('../services/emailService');
+const { sendEmail, emailTemplates } = require('../emailService');
 const { sendSMS, smsTemplates } = require('../smsService');
 const { logAdminAction } = require('./live_updates_mysql');
 
@@ -581,17 +581,13 @@ router.post('/process-approval', async (req, res) => {
 
       // Send approval email to newly approved member
       if (pendingMember.email) {
-        const html = templates.memberApproved({
-          name: pendingMember.full_name,
+        const [subject, html] = emailTemplates.memberApproved({
+          memberName: pendingMember.full_name,
           email: pendingMember.email,
-          approvedBy: admin.full_name || admin.name || 'System Admin',
-          date: new Date().toLocaleDateString()
+          adminName: admin.full_name || admin.name || 'System Admin'
         });
-        sendEmail({
-          to: pendingMember.email,
-          subject: 'Membership Approved - Loan Management System',
-          html
-        }).catch(() => {});
+        const adminFrom = admin.email ? { fromEmail: admin.email, fromName: admin.full_name || admin.name || 'System Admin' } : {};
+        sendEmail(pendingMember.email, subject, html, null, adminFrom).catch(() => {});
       }
       if (pendingMember.phone) {
         sendSMS(pendingMember.phone, smsTemplates.memberApproved({ 
@@ -634,17 +630,14 @@ router.post('/process-approval', async (req, res) => {
 
     // Send rejection email to denied member
     if (pendingMember.email) {
-      const html = templates.memberDenied({
-        name: pendingMember.full_name,
+      const [subject, html] = emailTemplates.memberDenied({
+        memberName: pendingMember.full_name,
         email: pendingMember.email,
-        reason: reason || 'Admin denied',
-        date: new Date().toLocaleDateString()
+        adminName: admin.full_name || admin.name || 'System Admin',
+        reason: reason || 'Admin decision'
       });
-      sendEmail({
-        to: pendingMember.email,
-        subject: 'Membership Application Status - Loan Management System',
-        html
-      }).catch(() => {});
+      const adminFrom = admin.email ? { fromEmail: admin.email, fromName: admin.full_name || admin.name || 'System Admin' } : {};
+      sendEmail(pendingMember.email, subject, html, null, adminFrom).catch(() => {});
     }
     if (pendingMember.phone) {
       sendSMS(pendingMember.phone, smsTemplates.memberDenied({
